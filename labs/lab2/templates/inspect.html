@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Lab2 — Inspect{% endblock %}
+{% block content %}
+  <h1>/inspect</h1>
+
+  <h3>Основное</h3>
+  <table>
+    <tr><th>method</th><td>{{ data.method }}</td></tr>
+    <tr><th>url</th><td>{{ data.url }}</td></tr>
+    <tr><th>path</th><td>{{ data.path }}</td></tr>
+    <tr><th>full_path</th><td>{{ data.full_path }}</td></tr>
+    <tr><th>remote_addr</th><td>{{ data.remote_addr }}</td></tr>
+  </table>
+
+  <h3>Query args (request.args)</h3>
+  <pre><code>{{ data.args | tojson(indent=2) }}</code></pre>
+
+  <h3>Form data (request.form)</h3>
+  <pre><code>{{ data.form | tojson(indent=2) }}</code></pre>
+
+  <h3>Cookies</h3>
+  <pre><code>{{ data.cookies | tojson(indent=2) }}</code></pre>
+
+  <h3>Headers</h3>
+  <pre><code>{{ data.headers | tojson(indent=2) }}</code></pre>
+
+  <p><a href="{{ url_for('index') }}">← Назад</a></p>
+{% endblock %}

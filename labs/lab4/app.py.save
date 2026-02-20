@@ -1,0 +1,437 @@
+import os
+import sqlite3
+from datetime import datetime
+
+from flask import (
+    Flask, g, render_template, request, redirect, url_for,
+    flash, session
+)
+from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.middleware.proxy_fix import ProxyFix
+
+
+
+# ====== Настройки ======
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DB_PATH = os.path.join(BASE_DIR, "lab4.db")  # у тебя уже есть lab4.db
+
+# Права (Lab5)
+RIGHTS = {
+    "admin": {
+        "users.create",
+        "users.edit",
+        "users.view",
+        "users.delete",
+        "visitlogs.view_all",
+        "reports.pages",
+        "reports.users",
+        "reports.export",
+    },
+    "user": {
+        "users.edit_self",
+        "users.view_self",
+        "visitlogs.view_self",
+    },
+}
+
+
+def create_app() -> Flask:
+    app = Flask(__name__)
+    app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-change-me")
+
+    # Чтобы корректно работало за reverse-proxy (nginx) + префикс (/lab4)
+    # ProxyFix нужен, чтобы Flask уважал X-Forwarded-Proto/For/Host
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
+
+    # --- DB helpers ---
+    def get_db():
+        if "db" not in g:
+            g.db = sqlite3.connect(DB_PATH, check_same_thread=False)
+            g.db.row_factory = sqlite3.Row
+        return g.db
+
+    @app.teardown_appcontext
+    def close_db(exc):
+        db = g.pop("db", None)
+        if db is not None:
+            db.close()
+
+    def init_db():
+        db = get_db()
+
+        # roles / users уже есть у тебя; на всякий случай создадим если нет
+        db.execute("""
+        CREATE TABLE IF NOT EXISTS roles (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            description TEXT
+        )
+        """)
+        db.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            login TEXT NOT NULL UNIQUE,
+            password_hash TEXT NOT NULL,
+            last_name TEXT,
+            first_name TEXT NOT NULL,
+            middle_name TEXT,
+            role_id INTEGER,
+            created_at TEXT NOT NULL,
+            FOREIGN KEY(role_id) REFERENCES roles(id)
+        )
+        """)
+
+        # Lab5: visit_logs
+        db.execute("""
+        CREATE TABLE IF NOT EXISTS visit_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            path VARCHAR(100) NOT NULL,
+            user_id INTEGER,
+            created_at TEXT NOT NULL,
+            FOREIGN KEY(user_id) REFERENCES users(id)
+        )
+        """)
+
+        # базовые роли (если пусто)
+        cur = db.execute("SELECT COUNT(*) AS c FROM roles")
+        if cur.fetchone()["c"] == 0:
+            db.execute("INSERT INTO roles(name, description) VALUES (?,?)", ("admin", "Администратор"))
+            db.execute("INSERT INTO roles(name, description) VALUES (?,?)", ("user", "Пользователь"))
+
+        db.commit()
+
+    # Инициализируем на первом запросе
+    @app.before_request
+    def _before_request():
+        init_db()
+
+        # ===== Lab5: журнал посещений =====
+        # Логируем только GET и только реальные страницы (без статики и без acme)
+        path = request.path or "/"
+        if request.method == "GET":
+            if not (path.startswith("/static") or path.startswith("/.well-known")):
+                db = get_db()
+                uid = session.get("user_id")
+                db.execute(
+                    "INSERT INTO visit_logs(path, user_id, created_at) VALUES (?,?,?)",
+                    (path, uid, datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+                )
+                db.commit()
+
+    # ====== Auth / current user ======
+    def get_current_user():
+        uid = session.get("user_id")
+        if not uid:
+            return None
+        db = get_db()
+        user = db.execute("""
+            SELECT u.*, r.name AS role_name, r.description AS role_desc
+            FROM users u
+            LEFT JOIN roles r ON r.id = u.role_id
+            WHERE u.id = ?
+        """, (uid,)).fetchone()
+        return user
+
+    def full_name(user_row):
+        if not user_row:
+            return ""
+        ln = (user_row["last_name"] or "").strip()
+        fn = (user_row["first_name"] or "").strip()
+        mn = (user_row["middle_name"] or "").strip()
+        parts = [p for p in [ln, fn, mn] if p]
+        return " ".join(parts) if parts else user_row["login"]
+
+    def role_rights(role_name: str) -> set:
+        return RIGHTS.get(role_name or "", set())
+
+    def has_right(user, right: str) -> bool:
+        if not user:
+            return False
+        rr = role_rights(user["role_name"])
+        return right in rr
+
+    def login_required(view_func):
+        def wrapper(*args, **kwargs):
+            if not get_current_user():
+                flash("Пожалуйста, войдите в систему.", "warning")
+                # next = куда вернуться после логина
+                return redirect(url_for("login", next=request.full_path))
+            return view_func(*args, **kwargs)
+        wrapper.__name__ = view_func.__name__
+        return wrapper
+
+    # ===== Lab5: check_rights decorator =====
+    def check_rights(right: str):
+        def decorator(view_func):
+            def wrapper(*args, **kwargs):
+                user = get_current_user()
+                if not user:
+                    flash("Пожалуйста, войдите в систему.", "warning")
+                    return redirect(url_for("login", next=request.full_path))
+
+                # special logic for "self" rights
+                if right == "users.edit":
+                    # admin can edit anyone
+                    if has_right(user, "users.edit"):
+                        return view_func(*args, **kwargs)
+                    # user can edit only self
+                    target_id = kwargs.get("user_id")
+                    if target_id is not None and int(target_id) == int(user["id"]) and has_right(user, "users.edit_self"):
+                        return view_func(*args, **kwargs)
+                    flash("У вас недостаточно прав для доступа к данной странице.", "danger")
+                    return redirect(url_for("index"))
+
+                if right == "users.view":
+                    if has_right(user, "users.view"):
+                        return view_func(*args, **kwargs)
+                    target_id = kwargs.get("user_id")
+                    if target_id is not None and int(target_id) == int(user["id"]) and has_right(user, "users.view_self"):
+                        return view_func(*args, **kwargs)
+                    flash("У вас недостаточно прав для доступа к данной странице.", "danger")
+                    return redirect(url_for("index"))
+
+                if not has_right(user, right):
+                    # для журнала посещений: обычному пользователю даём только self
+                    if right == "visitlogs.view_all" and has_right(user, "visitlogs.view_self"):
+                        # пусть обработает сам blueprint, он отфильтрует
+                        return view_func(*args, **kwargs)
+
+                    flash("У вас недостаточно прав для доступа к данной странице.", "danger")
+                    return redirect(url_for("index"))
+
+                return view_func(*args, **kwargs)
+
+            wrapper.__name__ = view_func.__name__
+            return wrapper
+        return decorator
+
+    @app.context_processor
+    def inject_helpers():
+        user = get_current_user()
+        def can(right: str) -> bool:
+            return has_right(user, right)
+        return {
+            "current_user": user,
+            "full_name": full_name,
+            "can": can,
+        }
+
+    # ====== Routes ======
+    @app.route("/")
+    def index():
+        # Главная: список пользователей (только для вошедших, но можно и всем — решай сам)
+        user = get_current_user()
+        if not user:
+            return redirect(url_for("login"))
+
+        db = get_db()
+        users = db.execute("""
+            SELECT u.*, r.name AS role_name, r.description AS role_desc
+            FROM users u
+            LEFT JOIN roles r ON r.id = u.role_id
+            ORDER BY u.id DESC
+        """).fetchall()
+
+        # Твои шаблоны могут называться иначе — если у тебя уже есть templates, подгони имя.
+        return render_template("index.html", users=users)
+
+    @app.route("/login", methods=["GET", "POST"])
+    def login():
+        db = get_db()
+
+        if request.method == "POST":
+            login_ = (request.form.get("login") or "").strip()
+            password = request.form.get("password") or ""
+
+            user = db.execute("""
+                SELECT u.*, r.name AS role_name
+                FROM users u
+                LEFT JOIN roles r ON r.id = u.role_id
+                WHERE u.login = ?
+            """, (login_,)).fetchone()
+
+            if not user or not check_password_hash(user["password_hash"], password):
+                flash("Неверный логин или пароль.", "danger")
+                return render_template("login.html")
+
+            session["user_id"] = user["id"]
+            flash("Вы успешно вошли.", "success")
+
+            nxt = request.args.get("next")
+            if nxt:
+                # безопасность: не даём внешние редиректы
+                if nxt.startswith("/"):
+                    return redirect(nxt)
+            return redirect(url_for("index"))
+
+        return render_template("login.html")
+
+    @app.route("/logout")
+    def logout():
+        session.pop("user_id", None)
+        flash("Вы вышли из системы.", "info")
+        return redirect(url_for("login"))
+
+    @app.route("/users/create", methods=["GET", "POST"])
+    @login_required
+    @check_rights("users.create")
+    def user_create():
+        db = get_db()
+        roles = db.execute("SELECT * FROM roles ORDER BY id").fetchall()
+
+        if request.method == "POST":
+            login_ = (request.form.get("login") or "").strip()
+            password = request.form.get("password") or ""
+            last_name = (request.form.get("last_name") or "").strip()
+            first_name = (request.form.get("first_name") or "").strip()
+            middle_name = (request.form.get("middle_name") or "").strip()
+            role_id = request.form.get("role_id")
+
+            if not login_ or not password or not first_name:
+                flash("Заполните обязательные поля (login, password, first_name).", "danger")
+                return render_template("user_form.html", roles=roles, mode="create")
+
+            try:
+                db.execute("""
+                    INSERT INTO users(login, password_hash, last_name, first_name, middle_name, role_id, created_at)
+                    VALUES (?,?,?,?,?,?,?)
+                """, (
+                    login_,
+                    generate_password_hash(password),
+                    last_name or None,
+                    first_name,
+                    middle_name or None,
+                    int(role_id) if role_id else None,
+                    datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                ))
+                db.commit()
+                flash("Пользователь создан.", "success")
+                return redirect(url_for("index"))
+            except sqlite3.IntegrityError:
+                flash("Логин уже занят.", "danger")
+
+        return render_template("user_form.html", roles=roles, mode="create")
+
+    @app.route("/users/<int:user_id>")
+    @login_required
+    @check_rights("users.view")
+    def user_view(user_id: int):
+        db = get_db()
+        user = db.execute("""
+            SELECT u.*, r.name AS role_name, r.description AS role_desc
+            FROM users u
+            LEFT JOIN roles r ON r.id = u.role_id
+            WHERE u.id = ?
+        """, (user_id,)).fetchone()
+
+        if not user:
+            flash("Пользователь не найден.", "warning")
+            return redirect(url_for("index"))
+
+        return render_template("user_view.html", user=user)
+
+    @app.route("/users/<int:user_id>/edit", methods=["GET", "POST"])
+    @login_required
+    @check_rights("users.edit")
+    def user_edit(user_id: int):
+        db = get_db()
+        roles = db.execute("SELECT * FROM roles ORDER BY id").fetchall()
+
+        target = db.execute("""
+            SELECT u.*, r.name AS role_name
+            FROM users u
+            LEFT JOIN roles r ON r.id = u.role_id
+            WHERE u.id = ?
+        """, (user_id,)).fetchone()
+
+        if not target:
+            flash("Пользователь не найден.", "warning")
+            return redirect(url_for("index"))
+
+        current = get_current_user()
+        is_admin = has_right(current, "users.edit")
+        is_self = int(current["id"]) == int(user_id)
+
+        if request.method == "POST":
+            last_name = (request.form.get("last_name") or "").strip()
+            first_name = (request.form.get("first_name") or "").strip()
+            middle_name = (request.form.get("middle_name") or "").strip()
+
+            if not first_name:
+                flash("Имя обязательно.", "danger")
+                return render_template("user_form.html", roles=roles, mode="edit", user=target, is_admin=is_admin, is_self=is_self)
+
+            # роль: менять только админу, у обычного пользователя поле должно быть disabled в шаблоне
+            role_id = target["role_id"]
+            if is_admin:
+                role_id_in = request.form.get("role_id")
+                role_id = int(role_id_in) if role_id_in else None
+
+            db.execute("""
+                UPDATE users SET last_name=?, first_name=?, middle_name=?, role_id=?
+                WHERE id=?
+            """, (last_name or None, first_name, middle_name or None, role_id, user_id))
+            db.commit()
+            flash("Данные пользователя обновлены.", "success")
+            return redirect(url_for("user_view", user_id=user_id))
+
+        return render_template("user_form.html", roles=roles, mode="edit", user=target, is_admin=is_admin, is_self=is_self)
+
+    @app.route("/users/<int:user_id>/delete", methods=["POST"])
+    @login_required
+    @check_rights("users.delete")
+    def user_delete(user_id: int):
+        db = get_db()
+        if session.get("user_id") == user_id:
+            flash("Нельзя удалить самого себя.", "danger")
+            return redirect(url_for("index"))
+
+        db.execute("DELETE FROM users WHERE id = ?", (user_id,))
+        db.commit()
+        flash("Пользователь удалён.", "success")
+        return redirect(url_for("index"))
+
+    @app.route("/change-password", methods=["GET", "POST"])
+    @login_required
+    def change_password():
+        db = get_db()
+        user = get_current_user()
+
+        if request.method == "POST":
+            old = request.form.get("old_password") or ""
+            new1 = request.form.get("new_password") or ""
+            new2 = request.form.get("new_password2") or ""
+
+            row = db.execute("SELECT * FROM users WHERE id=?", (user["id"],)).fetchone()
+            if not check_password_hash(row["password_hash"], old):
+                flash("Старый пароль неверный.", "danger")
+                return render_template("change_password.html")
+
+            if len(new1) < 4:
+                flash("Новый пароль слишком короткий (минимум 4 символа).", "danger")
+                return render_template("change_password.html")
+
+            if new1 != new2:
+                flash("Пароли не совпадают.", "danger")
+                return render_template("change_password.html")
+
+            db.execute("UPDATE users SET password_hash=? WHERE id=?",
+                       (generate_password_hash(new1), user["id"]))
+            db.commit()
+            flash("Пароль изменён.", "success")
+            return redirect(url_for("index"))
+
+        return render_template("change_password.html")
+
+    # ====== Blueprint отчётов (Lab5) ======
+    # файл reports.py должен лежать рядом
+    from reports import reports_bp
+    app.register_blueprint(reports_bp, url_prefix="/visit-logs")
+
+    return app
+
+
+app = create_app()
+
+if __name__ == "__main__":
+    app.run(host="127.0.0.1", port=9400, debug=True)

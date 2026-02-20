@@ -1,0 +1,23 @@
+# venv
+.venv/
+ve/
+venv/
+
+# python cache
+__pycache__/
+*.pyc
+
+# env secrets
+.env
+app/.env
+
+# runtime/uploads
+app/media/
+media/
+uploads/
+*.log
+instance/
+
+# sqlite db
+*.db
+.DS_Store

@@ -1,0 +1,5 @@
+{% macro field(label, name, value="", error="", type="text") -%}
+  <label class="form-label">{{ label }}</label>
+  <input class="form-control {% if error %}is-invalid{% endif %}" name="{{ name }}" type="{{ type }}" value="{{ value|e }}">
+  {% if error %}<div class="invalid-feedback">{{ error }}</div>{% endif %}
+{%- endmacro %}

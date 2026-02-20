@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block title %}Lab1 — Посты{% endblock %}
+
+{% block content %}
+  <h1>Lab1 — Список постов</h1>
+  <ul>
+    {% for post_id, post in posts.items() %}
+      <li>
+        <a href="{{ url_for('post', post_id=post_id) }}">{{ post.title }}</a>
+        <small>— {{ post.author }}, {{ post.date }}</small>
+      </li>
+    {% endfor %}
+  </ul>
+{% endblock %}

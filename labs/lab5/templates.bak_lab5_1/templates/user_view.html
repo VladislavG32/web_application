@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Lab4 — Просмотр{% endblock %}
+{% block content %}
+<h1 class="h3 mb-3">Просмотр пользователя</h1>
+
+<table class="table table-bordered" style="max-width:760px;">
+  <tr><th style="width:260px;">Идентификатор</th><td>{{ user.id }}</td></tr>
+  <tr><th>Логин</th><td>{{ user.login }}</td></tr>
+  <tr><th>Фамилия</th><td>{{ user.last_name or "—" }}</td></tr>
+  <tr><th>Имя</th><td>{{ user.first_name }}</td></tr>
+  <tr><th>Отчество</th><td>{{ user.middle_name or "—" }}</td></tr>
+  <tr><th>Роль</th><td>{{ user.role_name or "—" }}</td></tr>
+</table>
+
+<div class="d-flex gap-2">
+  <a class="btn btn-secondary" href="{{ url_for('index') }}">← Назад</a>
+  {% if me %}
+    <a class="btn btn-outline-secondary" href="{{ url_for('user_edit', user_id=user.id) }}">Редактировать</a>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Lab4 — Вход{% endblock %}
+{% block content %}
+<h1 class="h3 mb-3">Вход</h1>
+
+<form method="post" class="card card-body" style="max-width:520px;">
+  <label class="form-label">Логин</label>
+  <input class="form-control" name="login" value="{{ login_val }}" required>
+
+  <label class="form-label mt-3">Пароль</label>
+  <input class="form-control" name="password" type="password" required>
+
+  <button class="btn btn-primary mt-3" type="submit">Войти</button>
+
+  <div class="text-muted mt-3 small">
+    Тестовый пользователь (создаётся автоматически): <b>admin1</b> / <b>Admin12345!</b>
+  </div>
+</form>
+{% endblock %}
