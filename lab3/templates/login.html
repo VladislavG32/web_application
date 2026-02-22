@@ -4,38 +4,21 @@
 {% block content %}
   <div class="card">
     <h1 style="margin-top:0;">Вход</h1>
-    <p class="muted">
-      Введите логин и пароль. После входа можно открыть секретную страницу.
-    </p>
+    <p class="muted">Введите логин и пароль. Доступ к секретной странице — только после авторизации.</p>
 
     {% if error %}
-      <div class="alert alert-danger">{{ error }}</div>
+      <div class="error">{{ error }}</div>
     {% endif %}
 
-    <form method="post" action="{{ url_for('login') }}">
-      <input type="hidden" name="next" value="{{ next_url }}">
-
+    <form method="post" action="{{ url_for('login', next=request.args.get('next')) }}">
       <div class="field">
         <label for="username">Логин</label>
-        <input
-          id="username"
-          name="username"
-          type="text"
-          autocomplete="username"
-          value="{{ request.form.get('username', '') }}"
-          required
-        >
+        <input id="username" name="username" type="text" autocomplete="username" value="{{ request.form.get('username', '') }}">
       </div>
 
       <div class="field">
         <label for="password">Пароль</label>
-        <input
-          id="password"
-          name="password"
-          type="password"
-          autocomplete="current-password"
-          required
-        >
+        <input id="password" name="password" type="password" autocomplete="current-password">
       </div>
 
       <div class="field">

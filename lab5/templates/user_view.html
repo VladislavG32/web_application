@@ -1,32 +1,29 @@
-{% extends 'base.html' %}
-{% block title %}{{ app_title }} — Профиль пользователя{% endblock %}
+{% extends "base.html" %}
+{% block title %}Lab5 — Пользователь {{ user.login }}{% endblock %}
 
 {% block content %}
-<div class="card" style="max-width:820px;margin:0 auto;">
+<div class="card" style="max-width:900px;">
   <div class="table-toolbar">
     <div class="left">
-      <h2 style="margin:0">Просмотр пользователя</h2>
+      <h2 style="margin:0;">Профиль пользователя</h2>
       <span class="badge">ID {{ user.id }}</span>
     </div>
-    <div class="right row-actions">
-      <a class="btn-lite" href="{{ url_for('index') }}">К списку</a>
-      {% if current_user and can_edit_user(user) %}
-        <a class="btn-lite" href="{{ url_for('user_edit', user_id=user.id) }}">Редактирование</a>
+    <div class="right">
+      <a class="btn-lite" href="{{ url_for('index') }}">← Назад</a>
+      {% set is_self = current_user and current_user.id == user.id %}
+      {% if can('users.edit') or (is_self and can('users.edit_self')) %}
+      <a class="btn" href="{{ url_for('user_edit', user_id=user.id) }}">Редактировать</a>
       {% endif %}
     </div>
   </div>
 
-  <div class="table-wrap">
-    <table>
-      <tbody>
-        <tr><th style="width:260px">Логин</th><td>{{ user.login }}</td></tr>
-        <tr><th>Фамилия</th><td>{{ user.last_name or '—' }}</td></tr>
-        <tr><th>Имя</th><td>{{ user.first_name }}</td></tr>
-        <tr><th>Отчество</th><td>{{ user.middle_name or '—' }}</td></tr>
-        <tr><th>Роль</th><td>{{ role_title(user) }}</td></tr>
-        <tr><th>Дата создания</th><td>{{ user.created_at }}</td></tr>
-      </tbody>
-    </table>
-  </div>
+  <dl class="meta">
+    <dt>Идентификатор</dt><dd>{{ user.id }}</dd>
+    <dt>Логин</dt><dd><span class="code-lite">{{ user.login }}</span></dd>
+    <dt>Фамилия</dt><dd>{{ user.last_name or "—" }}</dd>
+    <dt>Имя</dt><dd>{{ user.first_name }}</dd>
+    <dt>Отчество</dt><dd>{{ user.middle_name or "—" }}</dd>
+    <dt>Роль</dt><dd>{{ user.role_name or "—" }}</dd>
+  </dl>
 </div>
 {% endblock %}

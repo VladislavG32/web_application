@@ -40,3 +40,79 @@ dl.meta dd { margin:0; }
 @media (max-width:700px){
   dl.meta { grid-template-columns:1fr; gap:4px; }
 }
+
+/* ===== Fix report tables visibility (Lab4) ===== */
+.table thead th {
+  color: #ffffff !important;
+}
+
+.table thead th a,
+.table thead th a:visited {
+  color: #ffffff !important;
+  text-decoration: none;
+}
+
+.table tbody td {
+  color: #111827;
+}
+
+.table tbody td a,
+.table tbody td a:visited {
+  color: #111827 !important;
+  text-decoration: underline;
+}
+
+.table tbody td:first-child {
+  color: #111827 !important;
+  max-width: 780px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+/* Если первая колонка — ссылка (URL / пользователь) */
+.table tbody td:first-child a {
+  color: #111827 !important;
+}
+
+/* ===== Fix visit_logs report tables (real selectors) ===== */
+.table-wrap table thead th {
+  color: #ffffff !important;
+}
+
+.table-wrap table thead th,
+.table-wrap table tbody td {
+  vertical-align: top;
+}
+
+.table-wrap table tbody td,
+.table-wrap table tbody td * {
+  color: #111827 !important;
+}
+
+/* Первая колонка (Путь / Пользователь) */
+.table-wrap table tbody td:first-child,
+.table-wrap table tbody td:first-child * {
+  color: #111827 !important;
+  white-space: normal !important;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+/* Особенно для <code>{{ r.path }}</code> */
+.table-wrap table tbody td code {
+  color: #111827 !important;
+  background: #f3f4f6 !important;
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-size: 0.92em;
+}
+
+/* ===== Report path cell (Lab4) ===== */
+.table-wrap table tbody td.report-path {
+  color: #111827 !important;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  white-space: normal !important;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}

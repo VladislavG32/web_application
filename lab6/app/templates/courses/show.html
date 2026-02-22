@@ -3,7 +3,7 @@
 {% block content %}
 <div class="page-grid">
   <section class="panel" style="padding:0; overflow:hidden;">
-    {% set bg_url = course.bg_image.url if course.bg_image else url_for('static', filename='images/polytech_logo.png') %}
+    {% set bg_url = url_for('image', image_id=course.background_image_id) if course.background_image_id else url_for('static', filename='images/polytech_logo.png') %}
     <div style="position:relative; min-height:320px; background-image:url('{{ bg_url }}'); background-size:cover; background-position:center;">
       <div style="position:absolute; inset:0; background:rgba(0,0,0,.62); display:grid; place-items:center; text-align:center; padding:24px;">
         <div style="max-width:900px;">
@@ -140,4 +140,19 @@
     {% endif %}
   </section>
 </div>
+
+{% if current_user.is_authenticated and current_user.id == course.author_id %}
+  <section class="panel" style="margin-top:16px;">
+    <div class="toolbar">
+      <h3 style="margin:0;">Управление курсом</h3>
+      <form method="post"
+            action="{{ url_for('courses.delete', course_id=course.id) }}"
+            onsubmit="return confirm('Удалить курс «{{ course.name }}»?');"
+            style="display:inline;">
+        <button type="submit" class="btn btn-danger">Удалить курс</button>
+      </form>
+    </div>
+  </section>
+{% endif %}
+
 {% endblock %}

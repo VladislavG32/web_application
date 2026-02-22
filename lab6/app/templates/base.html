@@ -32,8 +32,8 @@
                                 src="{{ url_for('static', filename='images/default-profile-picture-300x300.jpeg') }}" alt="profile-pic">
                         </div>
                         <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
-                            <a class="dropdown-item" href="#">Профиль</a>
-                            <a class="dropdown-item" href="#">Мои курсы</a>
+                            <a class="dropdown-item" href="{{ url_for('index') }}">Профиль</a>
+                            <a class="dropdown-item" href="{{ url_for('courses.my_courses') }}">Мои курсы</a>
                             <div class="dropdown-divider"></div>
                             <a class="dropdown-item" href="{{ url_for('auth.logout') }}">Выйти</a>
                         </div>

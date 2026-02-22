@@ -42,7 +42,7 @@
       </div>
 
       <div class="panel" style="margin-top:12px;">
-        {{ render_pagination(pagination, request.endpoint, {'sort': current_sort}) }}
+        {{ render_pagination(pagination, request.endpoint, {'course_id': course.id, 'sort': current_sort}) }}
       </div>
     {% else %}
       <p style="opacity:.75; margin:0;">Пока нет отзывов.</p>

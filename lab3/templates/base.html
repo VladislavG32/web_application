@@ -5,169 +5,67 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>{% block title %}Lab3{% endblock %}</title>
   <style>
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background: #eef2f7;
-      color: #1f2937;
-      line-height: 1.45;
-    }
-    .container {
-      max-width: 980px;
-      margin: 0 auto;
-      padding: 20px;
-    }
+    body { margin:0; font-family: Arial, sans-serif; background:#eef2f7; color:#1f2937; }
+    .container { max-width: 980px; margin: 0 auto; padding: 20px; }
     .topbar {
-      background: #ffffff;
-      border-bottom: 1px solid #dbe2ea;
-      position: sticky;
-      top: 0;
-      z-index: 10;
+      background:#ffffff; border-bottom:1px solid #dbe2ea;
+      position: sticky; top:0; z-index:10;
     }
     .topbar .inner {
-      max-width: 980px;
-      margin: 0 auto;
-      padding: 12px 20px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 12px;
-      flex-wrap: wrap;
+      max-width:980px; margin:0 auto; padding:12px 20px;
+      display:flex; justify-content:space-between; align-items:center; gap:12px;
     }
-    .brand {
-      font-size: 20px;
-      font-weight: 700;
-      text-decoration: none;
-      color: #111827;
-    }
-    .nav {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      align-items: center;
-    }
+    .brand { font-size: 20px; font-weight: 700; text-decoration:none; color:#111827; }
+    .nav { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
     .nav a {
-      text-decoration: none;
-      color: #1f2937;
-      border: 1px solid #cbd5e1;
-      background: #fff;
-      padding: 8px 12px;
-      border-radius: 10px;
+      text-decoration:none; color:#1f2937; border:1px solid #cbd5e1;
+      background:#fff; padding:8px 12px; border-radius:10px;
     }
-    .nav a:hover { background: #f8fafc; }
-
+    .nav a:hover { background:#f8fafc; }
     .card {
-      background: #fff;
-      border: 1px solid #dbe2ea;
-      border-radius: 14px;
-      padding: 18px;
-      margin-bottom: 16px;
+      background:#fff; border:1px solid #dbe2ea; border-radius:14px;
+      padding:18px; margin-bottom:16px;
       box-shadow: 0 1px 2px rgba(0,0,0,.03);
     }
-
-    .muted { color: #64748b; }
-
+    .muted { color:#64748b; }
     .btn {
-      display: inline-block;
-      padding: 10px 14px;
-      border-radius: 10px;
-      border: 1px solid #cbd5e1;
-      background: #fff;
-      text-decoration: none;
-      color: #111827;
-      cursor: pointer;
+      display:inline-block; padding:10px 14px; border-radius:10px;
+      border:1px solid #cbd5e1; background:#fff; text-decoration:none; color:#111827;
+      cursor:pointer;
     }
-    .btn:hover { background: #f8fafc; }
-
-    .btn-primary {
-      background: #2563eb;
-      border-color: #2563eb;
-      color: #fff;
+    .btn-primary { background:#2563eb; border-color:#2563eb; color:#fff; }
+    .btn-danger { background:#dc2626; border-color:#dc2626; color:#fff; }
+    .field { margin-bottom:14px; }
+    .field label { display:block; margin-bottom:6px; font-weight:600; }
+    .field input[type=text], .field input[type=password] {
+      width:100%; max-width:360px; padding:10px 12px; border:1px solid #cbd5e1; border-radius:10px;
+      box-sizing:border-box;
     }
-    .btn-primary:hover { background: #1d4ed8; }
-
-    .btn-danger {
-      background: #dc2626;
-      border-color: #dc2626;
-      color: #fff;
+    .error {
+      background:#fee2e2; border:1px solid #fecaca; color:#991b1b;
+      padding:10px 12px; border-radius:10px; margin-bottom:12px;
     }
-    .btn-danger:hover { background: #b91c1c; }
-
-    .field { margin-bottom: 14px; }
-    .field label {
-      display: block;
-      margin-bottom: 6px;
-      font-weight: 600;
+    .success {
+      background:#dcfce7; border:1px solid #bbf7d0; color:#166534;
+      padding:10px 12px; border-radius:10px;
     }
-    .field input[type=text],
-    .field input[type=password] {
-      width: 100%;
-      max-width: 360px;
-      padding: 10px 12px;
-      border: 1px solid #cbd5e1;
-      border-radius: 10px;
-      box-sizing: border-box;
-    }
-
-    .alert {
-      padding: 10px 12px;
-      border-radius: 10px;
-      margin-bottom: 12px;
-      border: 1px solid transparent;
-    }
-    .alert-success {
-      background: #dcfce7;
-      border-color: #bbf7d0;
-      color: #166534;
-    }
-    .alert-danger {
-      background: #fee2e2;
-      border-color: #fecaca;
-      color: #991b1b;
-    }
-    .alert-warning {
-      background: #fef3c7;
-      border-color: #fde68a;
-      color: #92400e;
-    }
-    .alert-info {
-      background: #dbeafe;
-      border-color: #bfdbfe;
-      color: #1e40af;
-    }
-
+    .flash { padding:10px 12px; border-radius:10px; margin-bottom:12px; border:1px solid #dbe2ea; background:#f8fafc; }
+    .flash.error { background:#fee2e2; border-color:#fecaca; color:#991b1b; }
+    .flash.success { background:#dcfce7; border-color:#bbf7d0; color:#166534; }
+    .flash.info, .flash.message { background:#eff6ff; border-color:#bfdbfe; color:#1d4ed8; }
     footer {
-      margin-top: 20px;
-      padding: 12px 0;
-      border-top: 1px solid #dbe2ea;
-      color: #64748b;
-      font-size: 14px;
+      margin-top:20px; padding:12px 0; border-top:1px solid #dbe2ea; color:#64748b;
+      font-size:14px;
     }
-
-    code {
-      background: #f1f5f9;
-      padding: 2px 6px;
-      border-radius: 6px;
-    }
-
-    @media (max-width: 640px) {
-      .container { padding: 14px; }
-      .topbar .inner { padding: 12px 14px; }
-      .brand { font-size: 18px; }
-    }
+    code { background:#f1f5f9; padding:2px 6px; border-radius:6px; }
   </style>
 </head>
 <body>
   <header class="topbar">
     <div class="inner">
       <a class="brand" href="{{ url_for('index') }}">Lab3 — Аутентификация</a>
-
       <nav class="nav">
         <a href="{{ url_for('index') }}">Главная</a>
-        <a href="{{ url_for('counter') }}">Счётчик посещений</a>
-
-        {# По ТЗ ссылка на секретную страницу только для авторизованных #}
         {% if current_user.is_authenticated %}
           <a href="{{ url_for('secret') }}">Секретная страница</a>
           <a href="{{ url_for('logout') }}">Выйти ({{ current_user.username }})</a>
@@ -182,15 +80,11 @@
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
         {% for category, message in messages %}
-          <div class="alert alert-{{ category if category in ['success','danger','warning','info'] else 'info' }}">
-            {{ message }}
-          </div>
+          <div class="flash {{ category or 'message' }}">{{ message }}</div>
         {% endfor %}
       {% endif %}
     {% endwith %}
-
     {% block content %}{% endblock %}
-
     <footer>
       Остапенко Владислав Русланович • Группа 241-3211
     </footer>

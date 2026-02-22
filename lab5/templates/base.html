@@ -3,53 +3,65 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}{{ app_title }}{% endblock %}</title>
+  <title>{% block title %}Lab5{% endblock %}</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='shared.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='lab45.css') }}">
   <style>
-    .page-wrap{max-width:1180px;margin:0 auto;padding:20px}
-    .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}
-    .topbar .nav{display:flex;gap:8px;flex-wrap:wrap}
-    .flash{margin:8px 0}
-    .flash.warning{background:#fff7ed;border-color:#fed7aa}
-    .flash.info{background:#eff6ff;border-color:#bfdbfe}
-    .flash.danger,.flash.error{background:#fff1f2;border-color:#fecdd3}
-    .flash.success{background:#ecfdf3;border-color:#bbf7d0}
-    .field{margin-bottom:12px}
-    .field .err,.field-error{color:#b42318;font-size:13px;margin-top:4px}
-    input.is-invalid, select.is-invalid{border-color:#ef4444 !important; box-shadow:0 0 0 3px rgba(239,68,68,.12)}
-    .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
-    .btn-danger{background:#fff1f2;border-color:#fecdd3;color:#b42318}
-    .btn-danger:hover{background:#ffe4e6}
-    .btn-lite{display:inline-block;padding:8px 14px;border-radius:8px;border:1px solid #cfd6df;background:#fff;color:#1f2328;text-decoration:none}
-    .btn-lite:hover{text-decoration:none;background:#f7f9fb}
-    .muted{color:#667085}
-    .table-wrap{overflow:auto}
-    .nowrap{white-space:nowrap}
-    .w-actions{width:360px}
+    .page-wrap { max-width: 1180px; margin: 0 auto; padding: 24px; }
+    .nav-row { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:16px; flex-wrap:wrap; }
+    .nav-links { display:flex; gap:10px; flex-wrap:wrap; }
+    .nav-links a {
+      display:inline-block; padding:10px 14px; border-radius:10px;
+      border:1px solid rgba(255,255,255,.12); text-decoration:none; color:inherit;
+      background: rgba(255,255,255,.03);
+    }
+    .nav-links a:hover { background: rgba(255,255,255,.06); }
+    .panel { background: rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.08); border-radius:16px; padding:18px; }
+    .field { margin-bottom: 14px; }
+    .field label { display:block; margin-bottom:6px; font-weight:600; }
+    .field input, .field select, .field textarea {
+      width:100%; border-radius:12px; padding:12px;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.03);
+      color: inherit;
+    }
+    .actions { display:flex; gap:8px; flex-wrap:wrap; margin-top:12px; }
+    .btn-lite {
+      display:inline-block; padding:10px 14px; border-radius:10px;
+      border:1px solid rgba(255,255,255,.12); text-decoration:none; color:inherit;
+      background: rgba(255,255,255,.03);
+      cursor:pointer;
+    }
+    .btn-lite:hover { background: rgba(255,255,255,.06); }
+    .btn-danger {
+      display:inline-block; padding:10px 14px; border-radius:10px;
+      border:1px solid rgba(239,68,68,.35); color:#fecaca; background: rgba(239,68,68,.12);
+      cursor:pointer;
+    }
+    .btn-danger:hover { filter: brightness(1.05); }
+    .table-wrap { overflow:auto; border-radius:14px; border:1px solid rgba(255,255,255,.08); }
+    table { width:100%; border-collapse: collapse; min-width: 760px; }
+    th, td { padding:10px 12px; border-bottom:1px solid rgba(255,255,255,.08); text-align:left; vertical-align:top; }
+    th { position: sticky; top: 0; background: rgba(15,23,42,.95); z-index: 1; }
+    .muted { color: var(--muted, #9aa4b2); }
+    .flash { margin-bottom:12px; padding:10px 12px; border-radius:10px; border:1px solid rgba(255,255,255,.12); }
+    .flash.error { border-color: rgba(239,68,68,.25); background: rgba(239,68,68,.12); color:#fecaca; }
+    .flash.success { border-color: rgba(34,197,94,.25); background: rgba(34,197,94,.12); color:#bbf7d0; }
+    .login-wrap { min-height: calc(100vh - 140px); display:grid; place-items:center; }
+    .login-card { width:100%; max-width:460px; }
+    @media (max-width:700px){ .page-wrap { padding: 16px; } }
   </style>
-  {% block head %}{% endblock %}
 </head>
 <body>
   <div class="page-wrap">
-    <header class="topbar card">
+    <header class="nav-row">
       <div>
-        <h1 style="margin:0">{{ app_title }}</h1>
-        <div class="muted">
-          {% if is_lab5_mode %}Пользователи • Права доступа • Журнал посещений • Отчёты{% else %}Пользователи • CRUD • Авторизация{% endif %}
-        </div>
+        <h1 style="margin:0;"><a href="/lab5/" style="text-decoration:none;color:inherit;">Lab5</a></h1>
+        <div class="muted">Авторизация • Журналы • Отчёты</div>
       </div>
-      <nav class="nav">
-        <a class="btn-lite" href="{{ url_for('index') }}">Пользователи</a>
-        {% if current_user %}
-          {% if can_right('visitlogs.view_all') or can_right('visitlogs.view_self') %}
-            <a class="btn-lite" href="{{ url_for('visitlogs.logs_index') }}">Журнал посещений</a>
-          {% endif %}
-          <a class="btn-lite" href="{{ url_for('change_password') }}">Смена пароля</a>
-          <a class="btn-lite" href="{{ url_for('logout') }}">Выйти</a>
-        {% else %}
-          <a class="btn-lite" href="{{ url_for('login') }}">Войти</a>
-        {% endif %}
+      <nav class="nav-links">
+        {% if current_user %}<a href="{{ url_for('index') }}">Пользователи</a><a href="{{ url_for('visitlogs.logs_index') }}">Журнал посещений</a><a href="{{ url_for('logout') }}">Выйти</a>{% else %}<a href="{{ url_for('login') }}">Войти</a>{% endif %}
+        <a href="/lab0/">К Lab0</a>
       </nav>
     </header>
 

@@ -4,15 +4,18 @@ import sqlite3
 from datetime import datetime
 from functools import wraps
 
-from flask import Flask, flash, g, redirect, render_template, request, session, url_for
+from flask import (
+    Flask, g, render_template, request, redirect, url_for,
+    flash, session
+)
+from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.middleware.proxy_fix import ProxyFix
-from werkzeug.security import check_password_hash, generate_password_hash
 
+# ====== Настройки ======
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(BASE_DIR, "lab4.db")
-APP_BASENAME = os.path.basename(BASE_DIR).lower()
-IS_LAB5_MODE = "lab5" in APP_BASENAME
 
+# Права (доп. функционал Lab5, оставлено для совместимости)
 RIGHTS = {
     "admin": {
         "users.create",
@@ -31,21 +34,18 @@ RIGHTS = {
     },
 }
 
+ALLOWED_PASSWORD_SPECIALS = set("~!?@#$%^&*_-+()[]{}></\\|\"'.,:;")
 LOGIN_RE = re.compile(r"^[A-Za-z0-9]{5,}$")
-# Разрешённые символы пароля по ТЗ
-PASSWORD_ALLOWED_RE = re.compile(
-    r'^[A-Za-zА-Яа-яЁё0-9~!?@#$%^&*_\-+()\[\]{}><\\/|"\'.,:;]+$'
-)
 
 
 def create_app() -> Flask:
     app = Flask(__name__)
     app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-change-me")
-    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
-    app.config["DB_PATH"] = DB_PATH
-    app.config["IS_LAB5_MODE"] = IS_LAB5_MODE
-    app.config["RIGHTS"] = RIGHTS
 
+    # Чтобы Flask корректно видел X-Forwarded-Prefix (например, /lab4)
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
+
+    # --- DB helpers ---
     def get_db():
         if "db" not in g:
             g.db = sqlite3.connect(DB_PATH, check_same_thread=False)
@@ -60,11 +60,12 @@ def create_app() -> Flask:
 
     def init_db():
         db = get_db()
+
         db.execute(
             """
             CREATE TABLE IF NOT EXISTS roles (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL UNIQUE,
+                name TEXT NOT NULL,
                 description TEXT
             )
             """
@@ -96,47 +97,35 @@ def create_app() -> Flask:
             """
         )
 
-        # seed roles
-        existing = {row["name"] for row in db.execute("SELECT name FROM roles").fetchall()}
-        if "admin" not in existing:
-            db.execute(
-                "INSERT INTO roles(name, description) VALUES (?, ?)",
-                ("admin", "Администратор"),
-            )
-        if "user" not in existing:
-            db.execute(
-                "INSERT INTO roles(name, description) VALUES (?, ?)",
-                ("user", "Пользователь"),
-            )
+        cur = db.execute("SELECT COUNT(*) AS c FROM roles")
+        if cur.fetchone()["c"] == 0:
+            db.execute("INSERT INTO roles(name, description) VALUES (?,?)", ("admin", "Администратор"))
+            db.execute("INSERT INTO roles(name, description) VALUES (?,?)", ("user", "Пользователь"))
+
         db.commit()
 
+    # Инициализация БД (упрощённо — при первом запросе)
     _db_inited = {"ok": False}
 
     @app.before_request
-    def before_every_request():
+    def _before_request():
         if not _db_inited["ok"]:
             init_db()
             _db_inited["ok"] = True
 
+        # Журнал посещений (доп. функционал)
+        path = request.path or "/"
         if request.method == "GET":
-            path = request.path or "/"
-            if not (
-                path.startswith("/static")
-                or path.startswith("/.well-known")
-                or path == "/favicon.ico"
-            ):
+            if not (path.startswith("/static") or path.startswith("/.well-known")):
                 db = get_db()
+                uid = session.get("user_id")
                 db.execute(
-                    "INSERT INTO visit_logs(path, user_id, created_at) VALUES (?, ?, ?)",
-                    (
-                        path[:100],
-                        session.get("user_id"),
-                        datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                    ),
+                    "INSERT INTO visit_logs(path, user_id, created_at) VALUES (?,?,?)",
+                    (path, uid, datetime.now().strftime("%Y-%m-%d %H:%M:%S")),
                 )
                 db.commit()
 
-    # ---------------- helpers ----------------
+    # ====== Auth / current user ======
     def get_current_user():
         uid = session.get("user_id")
         if not uid:
@@ -152,198 +141,182 @@ def create_app() -> Flask:
             (uid,),
         ).fetchone()
 
-    def get_user_by_id(user_id: int):
-        db = get_db()
-        return db.execute(
-            """
-            SELECT u.*, r.name AS role_name, r.description AS role_desc
-            FROM users u
-            LEFT JOIN roles r ON r.id = u.role_id
-            WHERE u.id = ?
-            """,
-            (user_id,),
-        ).fetchone()
-
-    def full_name(row) -> str:
-        if not row:
+    def full_name(user_row):
+        if not user_row:
             return ""
-        parts = [
-            (row["last_name"] or "").strip() if "last_name" in row.keys() else "",
-            (row["first_name"] or "").strip() if "first_name" in row.keys() else "",
-            (row["middle_name"] or "").strip() if "middle_name" in row.keys() else "",
-        ]
-        parts = [p for p in parts if p]
-        if parts:
-            return " ".join(parts)
-        return (row["login"] or "").strip() if "login" in row.keys() else ""
+        ln = (user_row["last_name"] or "").strip()
+        fn = (user_row["first_name"] or "").strip()
+        mn = (user_row["middle_name"] or "").strip()
+        parts = [p for p in [ln, fn, mn] if p]
+        return " ".join(parts) if parts else user_row["login"]
 
-    def role_title(row) -> str:
-        if not row:
-            return "—"
-        desc = row["role_desc"] if "role_desc" in row.keys() else None
-        if desc:
-            return desc
-        name = row["role_name"] if "role_name" in row.keys() else None
-        return name or "—"
+    def role_rights(role_name: str) -> set:
+        return RIGHTS.get(role_name or "", set())
 
     def has_right(user, right: str) -> bool:
         if not user:
             return False
-        role_name = user["role_name"] or ""
-        return right in RIGHTS.get(role_name, set())
+        return right in role_rights(user["role_name"])
 
-    def can_view_profile(actor, target_id: int) -> bool:
-        if not IS_LAB5_MODE:
-            return True  # LR4: просмотр доступен всем пользователям
-        if not actor:
-            return False
-        if has_right(actor, "users.view"):
-            return True
-        return int(actor["id"]) == int(target_id) and has_right(actor, "users.view_self")
-
-    def can_edit_profile(actor, target_id: int) -> bool:
-        if not actor:
-            return False
-        if not IS_LAB5_MODE:
-            return True  # LR4: любой аутентифицированный
-        if has_right(actor, "users.edit"):
-            return True
-        return int(actor["id"]) == int(target_id) and has_right(actor, "users.edit_self")
-
-    def can_delete_profile(actor, target_id: int) -> bool:
-        if not actor:
-            return False
-        if int(actor["id"]) == int(target_id):
-            return False
-        if not IS_LAB5_MODE:
-            return True
-        return has_right(actor, "users.delete")
-
-    def can_create_user(actor) -> bool:
-        if not actor:
-            return False
-        if not IS_LAB5_MODE:
-            return True
-        return has_right(actor, "users.create")
+    def _next_url_current_page():
+        # Корректно работает и локально, и под X-Forwarded-Prefix
+        return (request.script_root or "") + request.path
 
     def login_required(view_func):
         @wraps(view_func)
         def wrapper(*args, **kwargs):
             if not get_current_user():
                 flash("Пожалуйста, войдите в систему.", "warning")
-                return redirect(url_for("login", next=request.path))
+                return redirect(url_for("login", next=_next_url_current_page()))
             return view_func(*args, **kwargs)
 
         return wrapper
 
     def check_rights(right: str):
-        @wraps(check_rights)
+        # Оставлено для доп. маршрутов (Lab5/отчёты)
         def decorator(view_func):
             @wraps(view_func)
             def wrapper(*args, **kwargs):
                 user = get_current_user()
                 if not user:
                     flash("Пожалуйста, войдите в систему.", "warning")
-                    return redirect(url_for("login", next=request.path))
+                    return redirect(url_for("login", next=_next_url_current_page()))
 
-                target_id = kwargs.get("user_id")
+                if right == "users.edit":
+                    if has_right(user, "users.edit"):
+                        return view_func(*args, **kwargs)
+                    target_id = kwargs.get("user_id")
+                    if target_id is not None and int(target_id) == int(user["id"]) and has_right(user, "users.edit_self"):
+                        return view_func(*args, **kwargs)
+                    flash("У вас недостаточно прав для доступа к данной странице.", "danger")
+                    return redirect(url_for("index"))
+
                 if right == "users.view":
-                    if can_view_profile(user, int(target_id)):
+                    if has_right(user, "users.view"):
                         return view_func(*args, **kwargs)
-                elif right == "users.edit":
-                    if can_edit_profile(user, int(target_id)):
+                    target_id = kwargs.get("user_id")
+                    if target_id is not None and int(target_id) == int(user["id"]) and has_right(user, "users.view_self"):
                         return view_func(*args, **kwargs)
-                elif right == "visitlogs.view_all":
-                    if has_right(user, "visitlogs.view_all") or has_right(user, "visitlogs.view_self"):
-                        return view_func(*args, **kwargs)
-                else:
-                    if has_right(user, right):
-                        return view_func(*args, **kwargs)
+                    flash("У вас недостаточно прав для доступа к данной странице.", "danger")
+                    return redirect(url_for("index"))
 
-                flash("У вас недостаточно прав для доступа к данной странице.", "danger")
-                return redirect(url_for("index"))
+                if not has_right(user, right):
+                    if right == "visitlogs.view_all" and has_right(user, "visitlogs.view_self"):
+                        return view_func(*args, **kwargs)
+                    flash("У вас недостаточно прав для доступа к данной странице.", "danger")
+                    return redirect(url_for("index"))
+
+                return view_func(*args, **kwargs)
 
             return wrapper
 
         return decorator
 
-    def validate_login(login_value: str):
+    @app.context_processor
+    def inject_helpers():
+        user = get_current_user()
+
+        def can(right: str) -> bool:
+            return has_right(user, right)
+
+        return {
+            "current_user": user,
+            "full_name": full_name,
+            "can": can,
+        }
+
+    # ====== Валидация ======
+    def validate_login(login_value: str) -> str | None:
         if not login_value:
             return "Поле не может быть пустым."
         if not LOGIN_RE.fullmatch(login_value):
-            return "Логин: только латинские буквы/цифры, минимум 5 символов."
+            return "Логин должен содержать только латинские буквы и цифры, минимум 5 символов."
         return None
 
-    def validate_required_name(label: str, value: str):
-        if not (value or "").strip():
-            return f"Поле «{label}» не может быть пустым."
-        return None
+    def validate_password(password: str) -> list[str]:
+        errors: list[str] = []
 
-    def validate_password(password: str):
-        if password == "":
-            return "Поле не может быть пустым."
-        if " " in password:
-            return "Пароль не должен содержать пробелы."
-        length = len(password)
-        if length < 8:
-            return "Пароль должен содержать не менее 8 символов."
-        if length > 128:
-            return "Пароль должен содержать не более 128 символов."
-        if not PASSWORD_ALLOWED_RE.fullmatch(password):
-            return "Пароль содержит недопустимые символы."
-        if not any(ch.isdigit() for ch in password):
-            return "Пароль должен содержать хотя бы одну цифру."
-        letters = [ch for ch in password if ch.isalpha()]
-        if not letters:
-            return "Пароль должен содержать буквы."
-        if not any(ch.islower() for ch in letters):
-            return "Пароль должен содержать хотя бы одну строчную букву."
-        if not any(ch.isupper() for ch in letters):
-            return "Пароль должен содержать хотя бы одну заглавную букву."
-        return None
+        if not password:
+            return ["Поле не может быть пустым."]
 
-    def build_user_form_data(src=None):
-        src = src or {}
-        return {
-            "login": (src.get("login") or "").strip(),
-            "password": "",
-            "last_name": (src.get("last_name") or "").strip(),
-            "first_name": (src.get("first_name") or "").strip(),
-            "middle_name": (src.get("middle_name") or "").strip(),
-            "role_id": str(src.get("role_id") or "").strip(),
+        if len(password) < 8:
+            errors.append("Пароль должен содержать не менее 8 символов.")
+        if len(password) > 128:
+            errors.append("Пароль должен содержать не более 128 символов.")
+        if any(ch.isspace() for ch in password):
+            errors.append("Пароль не должен содержать пробелы.")
+
+        has_digit = any("0" <= ch <= "9" for ch in password)
+        if not has_digit:
+            errors.append("Пароль должен содержать хотя бы одну цифру.")
+
+        has_upper = False
+        has_lower = False
+
+        for ch in password:
+            if "0" <= ch <= "9":
+                continue
+            if ch in ALLOWED_PASSWORD_SPECIALS:
+                continue
+
+            # Разрешаем только латиницу/кириллицу (включая Ё/ё)
+            if re.fullmatch(r"[A-Za-zА-Яа-яЁё]", ch):
+                if ch.isalpha():
+                    if ch.lower() != ch and ch.upper() == ch:
+                        has_upper = True
+                    if ch.upper() != ch and ch.lower() == ch:
+                        has_lower = True
+                continue
+
+            errors.append(
+                "Пароль содержит недопустимые символы. Разрешены латинские/кириллические буквы, цифры и специальные символы из задания."
+            )
+            break
+
+        if not has_upper:
+            errors.append("Пароль должен содержать хотя бы одну заглавную букву.")
+        if not has_lower:
+            errors.append("Пароль должен содержать хотя бы одну строчную букву.")
+
+        return errors
+
+    def validate_user_payload(form, *, create_mode: bool = True):
+        data = {
+            "login": (form.get("login") or "").strip(),
+            "password": form.get("password") or "",
+            "last_name": (form.get("last_name") or "").strip(),
+            "first_name": (form.get("first_name") or "").strip(),
+            "middle_name": (form.get("middle_name") or "").strip(),
+            "role_id": (form.get("role_id") or "").strip(),
         }
+        errors: dict[str, str] = {}
 
-    @app.context_processor
-    def inject_context():
-        actor = get_current_user()
+        if not data["last_name"]:
+            errors["last_name"] = "Поле не может быть пустым."
+        if not data["first_name"]:
+            errors["first_name"] = "Поле не может быть пустым."
 
-        def can_view_user(target):
-            return can_view_profile(actor, int(target["id"]))
+        if create_mode:
+            login_error = validate_login(data["login"])
+            if login_error:
+                errors["login"] = login_error
 
-        def can_edit_user(target):
-            return can_edit_profile(actor, int(target["id"]))
+            pw_errors = validate_password(data["password"])
+            if pw_errors:
+                errors["password"] = pw_errors[0]
 
-        def can_delete_user(target):
-            return can_delete_profile(actor, int(target["id"]))
+        # role_id опционален; если выбран, должен быть целым
+        if data["role_id"]:
+            try:
+                int(data["role_id"])
+            except ValueError:
+                errors["role_id"] = "Некорректное значение роли."
 
-        return {
-            "current_user": actor,
-            "app_title": "Лабораторная работа №5" if IS_LAB5_MODE else "Лабораторная работа №4",
-            "is_lab5_mode": IS_LAB5_MODE,
-            "full_name": full_name,
-            "role_title": role_title,
-            "can_right": lambda r: has_right(actor, r),
-            "can_view_user": can_view_user,
-            "can_edit_user": can_edit_user,
-            "can_delete_user": can_delete_user,
-            "can_create_user": can_create_user(actor),
-        }
+        return data, errors
 
-    # ---------------- routes ----------------
-    @app.route("/")
-    def index():
+    def build_users_list():
         db = get_db()
-        users = db.execute(
+        return db.execute(
             """
             SELECT u.*, r.name AS role_name, r.description AS role_desc
             FROM users u
@@ -351,36 +324,44 @@ def create_app() -> Flask:
             ORDER BY u.id ASC
             """
         ).fetchall()
+
+    # ====== Routes ======
+    @app.route("/")
+    def index():
+        users = build_users_list()
         return render_template("index.html", users=users)
 
     @app.route("/login", methods=["GET", "POST"])
     def login():
+        db = get_db()
+
         if request.method == "POST":
-            login_value = (request.form.get("login") or "").strip()
+            login_ = (request.form.get("login") or "").strip()
             password = request.form.get("password") or ""
-            db = get_db()
+
             user = db.execute(
                 """
-                SELECT u.*, r.name AS role_name, r.description AS role_desc
+                SELECT u.*, r.name AS role_name
                 FROM users u
                 LEFT JOIN roles r ON r.id = u.role_id
                 WHERE u.login = ?
                 """,
-                (login_value,),
+                (login_,),
             ).fetchone()
 
             if not user or not check_password_hash(user["password_hash"], password):
                 flash("Неверный логин или пароль.", "danger")
-                return render_template("login.html", form={"login": login_value})
+                return render_template("login.html")
 
             session["user_id"] = user["id"]
             flash("Вы успешно вошли в систему.", "success")
-            nxt = request.args.get("next") or request.form.get("next")
+
+            nxt = request.args.get("next")
             if nxt and nxt.startswith("/"):
                 return redirect(nxt)
             return redirect(url_for("index"))
 
-        return render_template("login.html", form={"login": ""})
+        return render_template("login.html")
 
     @app.route("/logout")
     def logout():
@@ -391,270 +372,223 @@ def create_app() -> Flask:
     @app.route("/users/create", methods=["GET", "POST"])
     @login_required
     def user_create():
-        actor = get_current_user()
-        if not can_create_user(actor):
-            flash("У вас недостаточно прав для доступа к данной странице.", "danger")
-            return redirect(url_for("index"))
-
         db = get_db()
         roles = db.execute("SELECT * FROM roles ORDER BY id").fetchall()
 
-        if request.method == "GET":
-            return render_template(
-                "user_form.html",
-                mode="create",
-                form=build_user_form_data(),
-                errors={},
-                roles=roles,
-                role_disabled=False,
-            )
+        if request.method == "POST":
+            form_data, errors = validate_user_payload(request.form, create_mode=True)
 
-        form = build_user_form_data(request.form)
-        errors = {
-            "login": validate_login(form["login"]),
-            "password": validate_password(request.form.get("password") or ""),
-            "last_name": validate_required_name("Фамилия", form["last_name"]),
-            "first_name": validate_required_name("Имя", form["first_name"]),
-        }
-        errors = {k: v for k, v in errors.items() if v}
+            if errors:
+                flash("Исправьте ошибки в форме.", "danger")
+                return render_template(
+                    "user_form.html",
+                    roles=roles,
+                    mode="create",
+                    errors=errors,
+                    form=form_data,
+                )
 
-        role_id_db = None
-        if form["role_id"]:
             try:
-                role_id_db = int(form["role_id"])
-            except ValueError:
-                errors["role_id"] = "Некорректная роль."
+                db.execute(
+                    """
+                    INSERT INTO users(login, password_hash, last_name, first_name, middle_name, role_id, created_at)
+                    VALUES (?,?,?,?,?,?,?)
+                    """,
+                    (
+                        form_data["login"],
+                        generate_password_hash(form_data["password"]),
+                        form_data["last_name"],
+                        form_data["first_name"],
+                        form_data["middle_name"] or None,
+                        int(form_data["role_id"]) if form_data["role_id"] else None,
+                        datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    ),
+                )
+                db.commit()
+                flash("Пользователь успешно создан.", "success")
+                return redirect(url_for("index"))
+            except sqlite3.IntegrityError:
+                errors["login"] = "Этот логин уже занят."
+                flash("Не удалось создать пользователя.", "danger")
+                return render_template(
+                    "user_form.html",
+                    roles=roles,
+                    mode="create",
+                    errors=errors,
+                    form=form_data,
+                )
+            except Exception:
+                flash("Произошла ошибка при сохранении пользователя.", "danger")
+                return render_template(
+                    "user_form.html",
+                    roles=roles,
+                    mode="create",
+                    errors=errors,
+                    form=form_data,
+                )
 
-        if errors:
-            flash("Исправьте ошибки в форме.", "danger")
-            return render_template(
-                "user_form.html",
-                mode="create",
-                form=form,
-                errors=errors,
-                roles=roles,
-                role_disabled=False,
-            )
-
-        try:
-            db.execute(
-                """
-                INSERT INTO users(login, password_hash, last_name, first_name, middle_name, role_id, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    form["login"],
-                    generate_password_hash(request.form.get("password") or ""),
-                    form["last_name"],
-                    form["first_name"],
-                    form["middle_name"] or None,
-                    role_id_db,
-                    datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                ),
-            )
-            db.commit()
-        except sqlite3.IntegrityError:
-            flash("Не удалось сохранить пользователя: логин уже занят.", "danger")
-            errors["login"] = "Логин уже используется."
-            return render_template(
-                "user_form.html",
-                mode="create",
-                form=form,
-                errors=errors,
-                roles=roles,
-                role_disabled=False,
-            )
-
-        flash("Пользователь успешно создан.", "success")
-        return redirect(url_for("index"))
+        return render_template("user_form.html", roles=roles, mode="create", errors={}, form={})
 
     @app.route("/users/<int:user_id>")
     def user_view(user_id: int):
-        target = get_user_by_id(user_id)
-        if not target:
+        db = get_db()
+        user = db.execute(
+            """
+            SELECT u.*, r.name AS role_name, r.description AS role_desc
+            FROM users u
+            LEFT JOIN roles r ON r.id = u.role_id
+            WHERE u.id = ?
+            """,
+            (user_id,),
+        ).fetchone()
+
+        if not user:
             flash("Пользователь не найден.", "warning")
             return redirect(url_for("index"))
 
-        actor = get_current_user()
-        if not can_view_profile(actor, user_id):
-            if actor is None and not IS_LAB5_MODE:
-                pass
-            elif actor is None:
-                flash("Пожалуйста, войдите в систему.", "warning")
-                return redirect(url_for("login", next=request.path))
-            else:
-                flash("У вас недостаточно прав для доступа к данной странице.", "danger")
-                return redirect(url_for("index"))
-
-        return render_template("user_view.html", user=target)
+        return render_template("user_view.html", user=user)
 
     @app.route("/users/<int:user_id>/edit", methods=["GET", "POST"])
     @login_required
-    @check_rights("users.edit")
     def user_edit(user_id: int):
         db = get_db()
-        target = get_user_by_id(user_id)
+        roles = db.execute("SELECT * FROM roles ORDER BY id").fetchall()
+
+        target = db.execute(
+            """
+            SELECT u.*, r.name AS role_name
+            FROM users u
+            LEFT JOIN roles r ON r.id = u.role_id
+            WHERE u.id = ?
+            """,
+            (user_id,),
+        ).fetchone()
+
         if not target:
             flash("Пользователь не найден.", "warning")
             return redirect(url_for("index"))
 
-        actor = get_current_user()
-        is_admin = has_right(actor, "users.edit") if IS_LAB5_MODE else True
-        role_disabled = not is_admin
-        roles = db.execute("SELECT * FROM roles ORDER BY id").fetchall()
+        if request.method == "POST":
+            form_data, errors = validate_user_payload(request.form, create_mode=False)
 
-        if request.method == "GET":
-            form = build_user_form_data(
-                {
-                    "login": target["login"],
-                    "last_name": target["last_name"] or "",
-                    "first_name": target["first_name"] or "",
-                    "middle_name": target["middle_name"] or "",
-                    "role_id": target["role_id"] or "",
-                }
-            )
-            return render_template(
-                "user_form.html",
-                mode="edit",
-                user=target,
-                form=form,
-                errors={},
-                roles=roles,
-                role_disabled=role_disabled,
-            )
+            if errors:
+                flash("Исправьте ошибки в форме.", "danger")
+                return render_template(
+                    "user_form.html",
+                    roles=roles,
+                    mode="edit",
+                    user=target,
+                    errors=errors,
+                    form=form_data,
+                )
 
-        form = build_user_form_data(request.form)
-        # логин и пароль в форме редактирования не используются по ТЗ
-        form["login"] = target["login"]
+            try:
+                db.execute(
+                    """
+                    UPDATE users
+                    SET last_name=?, first_name=?, middle_name=?, role_id=?
+                    WHERE id=?
+                    """,
+                    (
+                        form_data["last_name"],
+                        form_data["first_name"],
+                        form_data["middle_name"] or None,
+                        int(form_data["role_id"]) if form_data["role_id"] else None,
+                        user_id,
+                    ),
+                )
+                db.commit()
+                flash("Данные пользователя успешно обновлены.", "success")
+                return redirect(url_for("index"))
+            except Exception:
+                flash("Произошла ошибка при обновлении пользователя.", "danger")
+                return render_template(
+                    "user_form.html",
+                    roles=roles,
+                    mode="edit",
+                    user=target,
+                    errors=errors,
+                    form=form_data,
+                )
 
-        errors = {
-            "last_name": validate_required_name("Фамилия", form["last_name"]),
-            "first_name": validate_required_name("Имя", form["first_name"]),
-        }
-        errors = {k: v for k, v in errors.items() if v}
-
-        role_id_db = target["role_id"]
-        if is_admin:
-            if form["role_id"]:
-                try:
-                    role_id_db = int(form["role_id"])
-                except ValueError:
-                    errors["role_id"] = "Некорректная роль."
-            else:
-                role_id_db = None
-
-        if errors:
-            flash("Исправьте ошибки в форме.", "danger")
-            return render_template(
-                "user_form.html",
-                mode="edit",
-                user=target,
-                form=form,
-                errors=errors,
-                roles=roles,
-                role_disabled=role_disabled,
-            )
-
-        try:
-            db.execute(
-                """
-                UPDATE users
-                SET last_name = ?, first_name = ?, middle_name = ?, role_id = ?
-                WHERE id = ?
-                """,
-                (
-                    form["last_name"],
-                    form["first_name"],
-                    form["middle_name"] or None,
-                    role_id_db,
-                    user_id,
-                ),
-            )
-            db.commit()
-        except sqlite3.DatabaseError:
-            flash("Не удалось обновить данные пользователя.", "danger")
-            return render_template(
-                "user_form.html",
-                mode="edit",
-                user=target,
-                form=form,
-                errors={},
-                roles=roles,
-                role_disabled=role_disabled,
-            )
-
-        flash("Данные пользователя успешно обновлены.", "success")
-        return redirect(url_for("user_view", user_id=user_id))
+        return render_template("user_form.html", roles=roles, mode="edit", user=target, errors={}, form={})
 
     @app.route("/users/<int:user_id>/delete", methods=["POST"])
     @login_required
     def user_delete(user_id: int):
-        actor = get_current_user()
-        if not can_delete_profile(actor, user_id):
-            flash("У вас недостаточно прав для доступа к данной странице.", "danger")
+        db = get_db()
+
+        if session.get("user_id") == user_id:
+            flash("Нельзя удалить текущего авторизованного пользователя.", "danger")
             return redirect(url_for("index"))
 
-        db = get_db()
-        target = get_user_by_id(user_id)
-        if not target:
+        user = db.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
+        if not user:
             flash("Пользователь не найден.", "warning")
             return redirect(url_for("index"))
 
         try:
             db.execute("DELETE FROM users WHERE id = ?", (user_id,))
             db.commit()
-        except sqlite3.DatabaseError:
-            flash("Не удалось удалить пользователя.", "danger")
-            return redirect(url_for("index"))
+            flash("Пользователь успешно удалён.", "success")
+        except Exception:
+            flash("Произошла ошибка при удалении пользователя.", "danger")
 
-        flash("Пользователь успешно удалён.", "success")
         return redirect(url_for("index"))
 
     @app.route("/change-password", methods=["GET", "POST"])
     @login_required
     def change_password():
-        actor = get_current_user()
-        errors = {}
+        db = get_db()
+        user = get_current_user()
+        errors: dict[str, str] = {}
 
         if request.method == "POST":
-            old_password = request.form.get("old_password") or ""
-            new_password = request.form.get("new_password") or ""
-            new_password2 = request.form.get("new_password2") or ""
+            old = request.form.get("old_password") or ""
+            new1 = request.form.get("new_password") or ""
+            new2 = request.form.get("new_password2") or ""
 
-            db = get_db()
-            row = db.execute("SELECT * FROM users WHERE id = ?", (actor["id"],)).fetchone()
-            if not check_password_hash(row["password_hash"], old_password):
-                errors["old_password"] = "Неверно указан старый пароль."
+            row = db.execute("SELECT * FROM users WHERE id=?", (user["id"],)).fetchone()
+            if not old:
+                errors["old_password"] = "Поле не может быть пустым."
+            elif not check_password_hash(row["password_hash"], old):
+                errors["old_password"] = "Старый пароль введён неверно."
 
-            pwd_error = validate_password(new_password)
-            if pwd_error:
-                errors["new_password"] = pwd_error
+            pw_errors = validate_password(new1)
+            if pw_errors:
+                errors["new_password"] = pw_errors[0]
 
-            if new_password != new_password2:
+            if not new2:
+                errors["new_password2"] = "Поле не может быть пустым."
+            elif new1 != new2:
                 errors["new_password2"] = "Пароли не совпадают."
 
             if errors:
-                flash("Не удалось изменить пароль. Исправьте ошибки формы.", "danger")
+                flash("Не удалось изменить пароль. Исправьте ошибки в форме.", "danger")
                 return render_template("change_password.html", errors=errors)
 
             try:
                 db.execute(
-                    "UPDATE users SET password_hash = ? WHERE id = ?",
-                    (generate_password_hash(new_password), actor["id"]),
+                    "UPDATE users SET password_hash=? WHERE id=?",
+                    (generate_password_hash(new1), user["id"]),
                 )
                 db.commit()
-            except sqlite3.DatabaseError:
-                flash("Ошибка при сохранении нового пароля.", "danger")
-                return render_template("change_password.html", errors={})
-
-            flash("Пароль успешно изменён.", "success")
-            return redirect(url_for("index"))
+                flash("Пароль успешно изменён.", "success")
+                return redirect(url_for("index"))
+            except Exception:
+                flash("Произошла ошибка при изменении пароля.", "danger")
+                return render_template("change_password.html", errors=errors)
 
         return render_template("change_password.html", errors=errors)
 
-    from reports import reports_bp
+    # ====== Blueprint отчётов (доп. Lab5) ======
+    try:
+        from reports import reports_bp
 
-    app.register_blueprint(reports_bp, url_prefix="/visit-logs")
+        app.register_blueprint(reports_bp, url_prefix="/visit-logs")
+    except Exception:
+        # Для ЛР4 отчёты не обязательны; не падаем, если файла нет/сломался.
+        pass
 
     return app
 

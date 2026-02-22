@@ -3,31 +3,27 @@
 
 {% block content %}
   <div class="card">
-    <h1 style="margin-top:0;">Главная страница</h1>
-    <p class="muted">
-      Лабораторная работа №3: аутентификация пользователей и работа с сессией.
+    <h1 style="margin-top:0;">Счётчик посещений</h1>
+    <p class="muted">Значение хранится в <code>session</code>.</p>
+    <p style="font-size:20px; margin:10px 0 0 0;">
+      Количество посещений: <b>{{ visits }}</b>
     </p>
+  </div>
 
+  <div class="card">
+    <h2 style="margin-top:0;">Статус авторизации</h2>
     {% if current_user.is_authenticated %}
-      <p class="alert alert-success" style="margin-top:12px;">
-        Вы авторизованы как <b>{{ current_user.username }}</b>.
-      </p>
-      <p style="display:flex; gap:10px; flex-wrap:wrap; margin:0;">
-        <a class="btn" href="{{ url_for('counter') }}">Открыть счётчик посещений</a>
-        <a class="btn btn-primary" href="{{ url_for('secret') }}">Открыть секретную страницу</a>
-      </p>
+      <p class="success">Вы вошли как <b>{{ current_user.username }}</b>.</p>
+      <p><a class="btn" href="{{ url_for('secret') }}">Открыть секретную страницу</a></p>
     {% else %}
-      <p>Для доступа к секретной странице выполните вход.</p>
-      <p style="display:flex; gap:10px; flex-wrap:wrap; margin:0;">
-        <a class="btn" href="{{ url_for('counter') }}">Открыть счётчик посещений</a>
-        <a class="btn btn-primary" href="{{ url_for('login') }}">Войти</a>
-      </p>
+      <p class="muted">Вы не авторизованы.</p>
+      <p><a class="btn btn-primary" href="{{ url_for('login') }}">Перейти ко входу</a></p>
     {% endif %}
   </div>
 
   <div class="card">
-    <h2 style="margin-top:0;">Тестовые данные для входа (по ТЗ)</h2>
-    <ul style="margin:0;">
+    <h2 style="margin-top:0;">Данные для входа (по ТЗ)</h2>
+    <ul>
       <li>Логин: <code>user</code></li>
       <li>Пароль: <code>qwerty</code></li>
     </ul>

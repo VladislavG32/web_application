@@ -8,12 +8,21 @@
       <h2 style="margin:0;">Пользователи</h2>
       <span class="badge">Всего: {{ users|length }}</span>
     </div>
-    {% if me %}
     <div class="right row-actions">
-      <a class="btn-lite" href="{{ url_for('change_password') }}">Смена пароля</a>
-      <a class="btn" href="{{ url_for('user_create') }}">Создать пользователя</a>
+      {% if current_user %}
+        <a class="btn-lite" href="{{ url_for('user_view', user_id=current_user.id) }}">Мой профиль</a>
+        <a class="btn-lite" href="{{ url_for('change_password') }}">Смена пароля</a>
+        <a class="btn-lite" href="{{ url_for('visitlogs.logs_index') }}">Журнал посещений</a>
+        {% if can('reports.pages') %}
+          <a class="btn-lite" href="{{ url_for('visitlogs.report_pages') }}">Отчёт по страницам</a>
+          <a class="btn-lite" href="{{ url_for('visitlogs.report_users') }}">Отчёт по пользователям</a>
+        {% endif %}
+        {% if can('users.create') %}
+          <a class="btn" href="{{ url_for('user_create') }}">Создать пользователя</a>
+        {% endif %}
+        <a class="btn-danger" href="{{ url_for('logout') }}">Выйти</a>
+      {% endif %}
     </div>
-    {% endif %}
   </div>
 
   <div class="table-wrap">
@@ -29,21 +38,28 @@
       </thead>
       <tbody>
         {% for u in users %}
+          {% set is_self = current_user and current_user.id == u.id %}
+          {% set can_view_user = can('users.view') or (is_self and can('users.view_self')) %}
+          {% set can_edit_user = can('users.edit') or (is_self and can('users.edit_self')) %}
           <tr>
             <td>{{ loop.index }}</td>
             <td><span class="code-lite">{{ u.login }}</span></td>
-            <td>{{ (u.last_name or '') }} {{ u.first_name }} {{ (u.middle_name or '') }}</td>
+            <td>{{ ((u.last_name or '') ~ ' ' ~ u.first_name ~ ' ' ~ (u.middle_name or ''))|trim }}</td>
             <td>{{ u.role_name or "—" }}</td>
             <td>
               <div class="row-actions">
-                <a class="btn-lite" href="{{ url_for('user_view', user_id=u.id) }}">Просмотр</a>
+                {% if can_view_user %}
+                  <a class="btn-lite" href="{{ url_for('user_view', user_id=u.id) }}">Просмотр</a>
+                {% endif %}
 
-                {% if me %}
+                {% if can_edit_user %}
                   <a class="btn-lite" href="{{ url_for('user_edit', user_id=u.id) }}">Редактировать</a>
+                {% endif %}
 
+                {% if can('users.delete') %}
                   <form method="post" action="{{ url_for('user_delete', user_id=u.id) }}" style="display:inline;"
-                        onsubmit="return confirm('Удалить пользователя: {{ ((u.last_name or '') ~ ' ' ~ u.first_name ~ ' ' ~ (u.middle_name or ''))|trim or u.login }}?');">
-                    <button type="submit" class="btn-danger" {% if me.id == u.id %}disabled{% endif %}>Удалить</button>
+                        onsubmit="return confirm('Удалить пользователя: {{ (((u.last_name or '') ~ ' ' ~ u.first_name ~ ' ' ~ (u.middle_name or ''))|trim) or u.login }}?');">
+                    <button type="submit" class="btn-danger" {% if is_self %}disabled{% endif %}>Удалить</button>
                   </form>
                 {% endif %}
               </div>

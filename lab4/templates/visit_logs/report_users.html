@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block content %}
+  <div class="card">
+    <h2>Отчёт по пользователям</h2>
+    <p class="muted">Сводка посещений по пользователям.</p>
+
+    <div class="table-wrap">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Пользователь</th>
+            <th>Посещений</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in rows %}
+            <tr>
+              <td>{{ r.full_name or r.login or r.user_login or r.username or r.fio or r.user_name or r.user_id or r.id or "—" }}</td>
+              <td>{{ r.cnt }}</td>
+            </tr>
+          {% else %}
+            <tr><td colspan="2" class="muted">Нет данных</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div style="margin-top:14px;">
+      <a class="btn-lite" href="{{ url_for('visitlogs.logs_index') }}">← Назад к журналу</a>
+      <a class="btn-lite" href="{{ url_for('visitlogs.export_users_csv') }}">Скачать CSV</a>
+    </div>
+  </div>
+{% endblock %}

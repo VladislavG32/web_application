@@ -1,29 +1,38 @@
-{% extends 'base.html' %}
-{% from 'partials/_form_macros.html' import user_form_fields %}
+{% extends "base.html" %}
+{% from "partials/_form_macros.html" import text_field, password_field, role_select %}
 
-{% block title %}
-  {{ app_title }} — {% if mode == 'create' %}Создание пользователя{% else %}Редактирование пользователя{% endif %}
-{% endblock %}
+{% set is_create = (mode == 'create') %}
+{% block title %}Lab4 — {{ 'Создание' if is_create else 'Редактирование' }} пользователя{% endblock %}
 
 {% block content %}
-<div class="card" style="max-width:760px;margin:0 auto;">
+<div class="card" style="max-width:900px;">
   <div class="table-toolbar">
     <div class="left">
-      <h2 style="margin:0">{% if mode == 'create' %}Создание пользователя{% else %}Редактирование пользователя{% endif %}</h2>
+      <h2 style="margin:0;">{{ 'Создание' if is_create else 'Редактирование' }} пользователя</h2>
       {% if user %}<span class="badge">ID {{ user.id }}</span>{% endif %}
-    </div>
-    <div class="right">
-      <a class="btn-lite" href="{{ url_for('index') }}">К списку</a>
     </div>
   </div>
 
   <form method="post" novalidate>
-    {{ user_form_fields(mode, form, errors, roles, role_disabled=role_disabled) }}
-    <div class="actions">
-      <button class="btn btn-primary" type="submit">
-        {% if mode == 'create' %}Сохранить{% else %}Обновить{% endif %}
-      </button>
-      <a class="btn-lite" href="{{ url_for('index') }}">Отмена</a>
+    {% if is_create %}
+      {{ text_field('login', 'Логин', (form.login if form is defined else ''), (errors.login if errors else ''), required=True) }}
+      {{ password_field('password', 'Пароль', (errors.password if errors else ''), required=True) }}
+    {% endif %}
+
+    {{ text_field('last_name', 'Фамилия', (form.last_name if form is defined and form.last_name is defined else (user.last_name if user else '')), (errors.last_name if errors else ''), required=True) }}
+    {{ text_field('first_name', 'Имя', (form.first_name if form is defined and form.first_name is defined else (user.first_name if user else '')), (errors.first_name if errors else ''), required=True) }}
+    {{ text_field('middle_name', 'Отчество', (form.middle_name if form is defined and form.middle_name is defined else (user.middle_name if user else '')), (errors.middle_name if errors else '')) }}
+    {{ role_select('role_id', 'Роль', roles, (form.role_id if form is defined and form.role_id is defined else (user.role_id if user else '')), (errors.role_id if errors else '')) }}
+
+    {% if is_create %}
+      <div class="alert alert-secondary small">
+        Требования к паролю: 8–128 символов, минимум одна заглавная и одна строчная буква, минимум одна цифра, без пробелов.
+      </div>
+    {% endif %}
+
+    <div class="d-flex gap-2 flex-wrap">
+      <button type="submit" class="btn btn-primary">Сохранить</button>
+      <a class="btn btn-outline-secondary" href="{{ url_for('index') }}">Отмена</a>
     </div>
   </form>
 </div>

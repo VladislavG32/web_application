@@ -126,7 +126,16 @@ class Review(db.Model):
         'Course',
         backref=db.backref('reviews', lazy='dynamic', cascade='all, delete-orphan')
     )
-    user = db.relationship('User')
+    user = db.relationship('User', foreign_keys=[user_id])
+
+    @property
+    def author_id(self):
+        # Совместимость со старым кодом/шаблонами
+        return self.user_id
+
+    @author_id.setter
+    def author_id(self, value):
+        self.user_id = value
 
     @property
     def author(self):

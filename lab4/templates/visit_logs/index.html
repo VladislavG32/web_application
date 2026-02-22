@@ -18,10 +18,10 @@
   <div class="panel" style="margin-bottom:12px;">
     <div style="font-weight:600; margin-bottom:8px;">Отчёты (администратор)</div>
     <div class="row-actions">
-      <a class="btn" href="/lab4/visit-logs/report/pages">Отчёт по страницам</a>
-      <a class="btn" href="/lab4/visit-logs/report/users">Отчёт по пользователям</a>
-      <a class="btn-lite" href="/lab4/visit-logs/export/pages.csv">CSV: страницы</a>
-      <a class="btn-lite" href="/lab4/visit-logs/export/users.csv">CSV: пользователи</a>
+      <a class="btn" href="{{ url_for('visitlogs.report_pages') }}">Отчёт по страницам</a>
+      <a class="btn" href="{{ url_for('visitlogs.report_users') }}">Отчёт по пользователям</a>
+      <a class="btn-lite" href="{{ url_for('visitlogs.export_pages_csv') }}">CSV: страницы</a>
+      <a class="btn-lite" href="{{ url_for('visitlogs.export_users_csv') }}">CSV: пользователи</a>
     </div>
   </div>
   {% endif %}

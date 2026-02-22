@@ -1,42 +1,39 @@
-{% extends 'base.html' %}
-{% block title %}{{ app_title }} — Журнал посещений{% endblock %}
+{% extends "base.html" %}
+{% block title %}Lab5 — Журнал посещений{% endblock %}
 
 {% block content %}
 <div class="card">
   <div class="table-toolbar">
     <div class="left">
-      <h2 style="margin:0">Журнал посещений</h2>
-      <span class="badge">Всего записей: {{ total }}</span>
-      <span class="badge">Страница {{ page }} / {{ pages_count }}</span>
-      <span class="badge">Роль: {{ current_role_title }}</span>
+      <h2 style="margin:0;">Журнал посещений</h2>
+      <span class="badge">Страница {{ page }} из {{ pages }}</span>
     </div>
-    <div class="right row-actions">
-      <a class="btn-lite" href="{{ url_for('index') }}">К пользователям</a>
+    <div class="right">
+      <a class="btn-lite" href="/lab5/">На главную</a>
+      <a class="btn-lite" href="/lab5/logout">Выйти</a>
     </div>
   </div>
 
   {% if can_reports %}
-  <div class="card" style="background:#f8fafc;">
-    <div class="table-toolbar" style="margin-bottom:0;">
-      <div class="left"><strong>Отчёты</strong></div>
-      <div class="right row-actions">
-        <a class="btn-lite" href="{{ url_for('visitlogs.report_pages') }}">Отчёт по страницам</a>
-        <a class="btn-lite" href="{{ url_for('visitlogs.report_users') }}">Отчёт по пользователям</a>
-      </div>
+  <div class="panel" style="margin-bottom:12px;">
+    <div style="font-weight:600; margin-bottom:8px;">Отчёты (администратор)</div>
+    <div class="row-actions">
+      <a class="btn" href="/lab5/visit-logs/report/pages">Отчёт по страницам</a>
+      <a class="btn" href="/lab5/visit-logs/report/users">Отчёт по пользователям</a>
+      <a class="btn-lite" href="/lab5/visit-logs/export/pages.csv">CSV: страницы</a>
+      <a class="btn-lite" href="/lab5/visit-logs/export/users.csv">CSV: пользователи</a>
     </div>
   </div>
   {% endif %}
 
   <div class="table-toolbar">
-    <div class="left muted">Показывать по:</div>
-    <div class="right row-actions">
-      {% for n in [5,10,20,50] %}
-        {% if n == per_page %}
-          <span class="badge">{{ n }}</span>
-        {% else %}
-          <a class="btn-lite" href="{{ url_for('visitlogs.logs_index', page=1, per_page=n) }}">{{ n }}</a>
-        {% endif %}
-      {% endfor %}
+    <div class="left small">Показано записей: {{ logs|length }}</div>
+    <div class="right small">
+      Показывать:
+      <a href="?page=1&per_page=5">5</a> |
+      <a href="?page=1&per_page=10">10</a> |
+      <a href="?page=1&per_page=20">20</a> |
+      <a href="?page=1&per_page=50">50</a>
     </div>
   </div>
 
@@ -44,36 +41,35 @@
     <table>
       <thead>
         <tr>
-          <th style="width:70px">№</th>
+          <th style="width:90px;">№</th>
           <th>Пользователь</th>
           <th>Страница</th>
-          <th style="width:220px">Дата и время</th>
+          <th style="width:240px;">Дата</th>
         </tr>
       </thead>
       <tbody>
         {% for row in logs %}
-          <tr>
-            <td>{{ row.n }}</td>
-            <td>{{ row.user }}</td>
-            <td><span class="code-lite">{{ row.path }}</span></td>
-            <td class="nowrap">{{ row.created_at }}</td>
-          </tr>
-        {% else %}
-          <tr><td colspan="4">Нет записей журнала.</td></tr>
+        <tr>
+          <td>{{ row.n }}</td>
+          <td>{{ row.user }}</td>
+          <td><span class="code-lite">{{ row.path }}</span></td>
+          <td>{{ row.dt }}</td>
+        </tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
 
-  <div class="table-toolbar" style="margin-top:10px;">
+  <div class="table-toolbar" style="margin-top:12px;">
     <div class="left">
       {% if page > 1 %}
-        <a class="btn-lite" href="{{ url_for('visitlogs.logs_index', page=page-1, per_page=per_page) }}">← Назад</a>
+        <a class="btn-lite" href="?page={{ page-1 }}&per_page={{ per_page }}">← Назад</a>
       {% endif %}
     </div>
     <div class="right">
-      {% if page < pages_count %}
-        <a class="btn-lite" href="{{ url_for('visitlogs.logs_index', page=page+1, per_page=per_page) }}">Вперёд →</a>
+      <span class="small">Страница {{ page }} из {{ pages }}</span>
+      {% if page < pages %}
+        <a class="btn-lite" href="?page={{ page+1 }}&per_page={{ per_page }}">Вперёд →</a>
       {% endif %}
     </div>
   </div>

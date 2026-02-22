@@ -1,24 +1,28 @@
-{% extends 'base.html' %}
-{% block title %}{{ app_title }} — Вход{% endblock %}
+{% extends "base.html" %}
+{% block title %}Lab5 — Вход{% endblock %}
 
 {% block content %}
-<div class="card" style="max-width:520px;margin:0 auto;">
-  <h2 style="margin-top:0">Вход в систему</h2>
-  <p class="muted">Введите логин и пароль.</p>
-  <form method="post">
-    <input type="hidden" name="next" value="{{ request.args.get('next', '') }}">
-    <div class="field">
-      <label for="login">Логин</label>
-      <input id="login" name="login" type="text" autocomplete="username" required value="{{ (form.login if form else '') or '' }}">
-    </div>
-    <div class="field">
-      <label for="password">Пароль</label>
-      <input id="password" name="password" type="password" autocomplete="current-password" required>
-    </div>
-    <div class="actions">
-      <button class="btn btn-primary" type="submit">Войти</button>
-      <a class="btn-lite" href="{{ url_for('index') }}">Отмена</a>
-    </div>
-  </form>
+<div class="login-wrap">
+  <div class="card login-card">
+    <h2 style="margin-top:0;">Вход в систему</h2>
+    <p class="muted">Введите учётные данные для доступа к Lab5.</p>
+
+    <form method="post">
+      <div class="field">
+        <label for="login">Логин</label>
+        <input id="login" name="login" type="text" autocomplete="username" required>
+      </div>
+
+      <div class="field">
+        <label for="password">Пароль</label>
+        <input id="password" name="password" type="password" autocomplete="current-password" required>
+      </div>
+
+      <div class="actions">
+        <button class="btn" type="submit">Войти</button>
+        <a class="btn-lite" href="/lab0/">На главную</a>
+      </div>
+    </form>
+  </div>
 </div>
 {% endblock %}

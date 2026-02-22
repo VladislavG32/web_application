@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block content %}
+  <div class="card">
+    <h2>Отчёт по страницам</h2>
+    <p class="muted">Сводка посещений по URL.</p>
+
+    <div class="table-wrap">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Путь</th>
+            <th>Посещений</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in rows %}
+            <tr>
+              <td class="report-path">{{ r.path or r.url or r.page or r.request_path or r.endpoint or "—" }}</td>
+              <td>{{ r.cnt }}</td>
+            </tr>
+          {% else %}
+            <tr><td colspan="2" class="muted">Нет данных</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div style="margin-top:14px;">
+      <a class="btn-lite" href="{{ url_for('visitlogs.logs_index') }}">← Назад к журналу</a>
+      <a class="btn-lite" href="{{ url_for('visitlogs.export_pages_csv') }}">Скачать CSV</a>
+    </div>
+  </div>
+{% endblock %}

@@ -1,23 +1,21 @@
-{% extends 'base.html' %}
-{% block title %}{{ app_title }} — Вход{% endblock %}
+{% extends "base.html" %}
+{% block title %}Lab4 — Вход{% endblock %}
 
 {% block content %}
-<div class="card" style="max-width:520px;margin:0 auto;">
-  <h2 style="margin-top:0">Вход в систему</h2>
-  <p class="muted">Введите логин и пароль.</p>
+<div class="card" style="max-width: 480px; margin: 0 auto;">
+  <h2 class="mb-3">Вход в систему</h2>
   <form method="post">
-    <input type="hidden" name="next" value="{{ request.args.get('next', '') }}">
-    <div class="field">
-      <label for="login">Логин</label>
-      <input id="login" name="login" type="text" autocomplete="username" required value="{{ (form.login if form else '') or '' }}">
+    <div class="mb-3">
+      <label for="login" class="form-label">Логин</label>
+      <input id="login" name="login" type="text" class="form-control" required autocomplete="username">
     </div>
-    <div class="field">
-      <label for="password">Пароль</label>
-      <input id="password" name="password" type="password" autocomplete="current-password" required>
+    <div class="mb-3">
+      <label for="password" class="form-label">Пароль</label>
+      <input id="password" name="password" type="password" class="form-control" required autocomplete="current-password">
     </div>
-    <div class="actions">
-      <button class="btn btn-primary" type="submit">Войти</button>
-      <a class="btn-lite" href="{{ url_for('index') }}">Отмена</a>
+    <div class="d-flex gap-2">
+      <button type="submit" class="btn btn-primary">Войти</button>
+      <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">Назад</a>
     </div>
   </form>
 </div>

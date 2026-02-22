@@ -21,7 +21,7 @@ class PrefixMiddleware:
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = "lab2-dev-key"
-app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
+# app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 app.wsgi_app = PrefixMiddleware(app.wsgi_app, prefix="/lab2")
 
 # Разрешены: цифры, пробелы, (), -, ., +

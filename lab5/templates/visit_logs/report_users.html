@@ -1,40 +1,42 @@
-{% extends 'base.html' %}
-{% block title %}{{ app_title }} — Отчёт по пользователям{% endblock %}
+{% extends "base.html" %}
+{% block title %}Lab5 — Отчёт по пользователям{% endblock %}
 
 {% block content %}
 <div class="card">
   <div class="table-toolbar">
     <div class="left">
-      <h2 style="margin:0">Отчёт по пользователям</h2>
-      <span class="badge">Строк: {{ rows|length }}</span>
+      <h2 style="margin:0;">Отчёт по пользователям</h2>
+      <span class="badge">Записей: {{ rows|length }}</span>
     </div>
-    <div class="right row-actions">
-      <a class="btn-lite" href="{{ url_for('visitlogs.logs_index') }}">К журналу</a>
-      <a class="btn btn-primary" href="{{ url_for('visitlogs.export_users_csv') }}">Экспорт в CSV</a>
+    <div class="right">
+      <a class="btn-lite" href="/lab5/visit-logs/">Назад к журналу</a>
+      <a class="btn" href="/lab5/visit-logs/export/users.csv">Экспорт в CSV</a>
     </div>
   </div>
 
+  {% if rows %}
   <div class="table-wrap">
     <table>
       <thead>
         <tr>
-          <th style="width:70px">№</th>
+          <th style="width:80px;">№</th>
           <th>Пользователь</th>
-          <th style="width:220px">Количество посещений</th>
+          <th style="width:240px;">Количество посещений</th>
         </tr>
       </thead>
       <tbody>
         {% for row in rows %}
-          <tr>
-            <td>{{ row.n }}</td>
-            <td>{{ row.user }}</td>
-            <td>{{ row.cnt }}</td>
-          </tr>
-        {% else %}
-          <tr><td colspan="3">Нет данных.</td></tr>
+        <tr>
+          <td>{{ row.n }}</td>
+          <td>{{ row.user }}</td>
+          <td>{{ row.cnt }}</td>
+        </tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
+  {% else %}
+    <div class="panel">Нет данных для отображения.</div>
+  {% endif %}
 </div>
 {% endblock %}

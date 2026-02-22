@@ -1,19 +1,15 @@
-{% extends 'base.html' %}
-{% block title %}{{ app_title }} — Пользователи{% endblock %}
+{% extends "base.html" %}
+{% block title %}Lab4 — Список пользователей{% endblock %}
 
 {% block content %}
 <div class="card">
   <div class="table-toolbar">
     <div class="left">
-      <h2 style="margin:0">Список пользователей</h2>
-      <span class="badge">Всего: {{ users|length }}</span>
+      <h2 style="margin:0;">Список пользователей</h2>
     </div>
     <div class="right row-actions">
       {% if current_user %}
-        <a class="btn-lite" href="{{ url_for('user_view', user_id=current_user.id) }}">Мой профиль</a>
-      {% endif %}
-      {% if can_create_user %}
-        <a class="btn btn-primary" href="{{ url_for('user_create') }}">Создать пользователя</a>
+        <a class="btn btn-primary" href="{{ url_for('user_create') }}">Создание пользователя</a>
       {% endif %}
     </div>
   </div>
@@ -22,10 +18,10 @@
     <table>
       <thead>
         <tr>
-          <th style="width:70px">№</th>
+          <th style="width:80px;">№</th>
           <th>ФИО</th>
-          <th>Роль</th>
-          <th class="w-actions">Действия</th>
+          <th>Название роли</th>
+          <th style="width:360px;">Действия</th>
         </tr>
       </thead>
       <tbody>
@@ -33,69 +29,56 @@
           <tr>
             <td>{{ loop.index }}</td>
             <td>{{ full_name(u) }}</td>
-            <td>{{ role_title(u) }}</td>
+            <td>{{ u.role_name or '—' }}</td>
             <td>
               <div class="row-actions">
-                {% if can_view_user(u) %}
-                  <a class="btn-lite" href="{{ url_for('user_view', user_id=u.id) }}">Просмотр</a>
-                {% endif %}
+                <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('user_view', user_id=u.id) }}">Просмотр</a>
 
-                {% if current_user and can_edit_user(u) %}
-                  <a class="btn-lite" href="{{ url_for('user_edit', user_id=u.id) }}">Редактирование</a>
-                {% endif %}
+                {% if current_user %}
+                  <a class="btn btn-outline-primary btn-sm" href="{{ url_for('user_edit', user_id=u.id) }}">Редактирование</a>
 
-                {% if current_user and can_delete_user(u) %}
-                  <button type="button"
-                          class="btn-danger js-open-delete"
-                          data-id="{{ u.id }}"
-                          data-name="{{ full_name(u) if full_name(u) else u.login }}">
+                  <button
+                    type="button"
+                    class="btn btn-outline-danger btn-sm"
+                    data-bs-toggle="modal"
+                    data-bs-target="#deleteModal{{ u.id }}"
+                    {% if current_user.id == u.id %}disabled{% endif %}
+                  >
                     Удаление
                   </button>
                 {% endif %}
               </div>
+
+              {% if current_user %}
+              <div class="modal fade" id="deleteModal{{ u.id }}" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog">
+                  <div class="modal-content">
+                    <div class="modal-header">
+                      <h5 class="modal-title">Подтверждение удаления</h5>
+                      <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                      Вы уверены, что хотите удалить пользователя {{ full_name(u) }}?
+                    </div>
+                    <div class="modal-footer">
+                      <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Нет</button>
+                      <form method="post" action="{{ url_for('user_delete', user_id=u.id) }}">
+                        <button type="submit" class="btn btn-danger">Да</button>
+                      </form>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              {% endif %}
             </td>
           </tr>
         {% else %}
-          <tr><td colspan="4">Нет пользователей.</td></tr>
+          <tr>
+            <td colspan="4" class="text-center text-secondary">Пользователей пока нет</td>
+          </tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
 </div>
-
-{% if current_user %}
-<dialog id="deleteDialog" style="max-width:520px;width:calc(100% - 32px);border:1px solid #e5e7eb;border-radius:12px;padding:0;">
-  <div class="card" style="margin:0;border:0;box-shadow:none;">
-      <h3 style="margin-top:0">Подтверждение удаления</h3>
-      <p id="deleteDialogText">Вы уверены, что хотите удалить пользователя?</p>
-      <div class="actions">
-        <button id="deleteDialogCancel" class="btn-lite" type="button">Нет</button>
-        <form id="deleteForm" method="post" action="" style="margin:0;padding:0;border:0;background:transparent;display:inline;">
-          <button class="btn-danger" type="submit">Да</button>
-        </form>
-      </div>
-    </div>
-</dialog>
-
-<script>
-  (function () {
-    const dialog = document.getElementById('deleteDialog');
-    if (!dialog) return;
-    const textEl = document.getElementById('deleteDialogText');
-    const yesForm = document.getElementById('deleteForm');
-    const cancelBtn = document.getElementById('deleteDialogCancel');
-
-    document.querySelectorAll('.js-open-delete').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const userId = btn.dataset.id;
-        const userName = btn.dataset.name || 'пользователя';
-        textEl.textContent = `Вы уверены, что хотите удалить пользователя «${userName}»?`;
-        yesForm.action = `{{ url_for('user_delete', user_id=0) }}`.replace('/0/delete', `/${userId}/delete`);
-        if (typeof dialog.showModal === 'function') dialog.showModal();
-      });
-    });
-    if (cancelBtn) cancelBtn.addEventListener('click', () => dialog.close());
-  })();
-</script>
-{% endif %}
 {% endblock %}

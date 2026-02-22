@@ -130,7 +130,21 @@ def create():
             img = ImageSaver(f).save()
 
         image_id = img.id if img else None
+        if not image_id:
+            from models import Image
+            default_img = db.session.execute(db.select(Image).limit(1)).scalar_one_or_none()
+            if default_img:
+                image_id = default_img.id
+
+        if not image_id:
+            fallback_image = db.session.query(Image).first()
+            if fallback_image is None:
+                flash('Невозможно создать курс без изображения: сначала загрузите хотя бы одно изображение.', 'danger')
+                return redirect(request.url)
+            image_id = fallback_image.id
+
         course = Course(**params(), background_image_id=image_id)
+
         db.session.add(course)
         db.session.commit()
     except IntegrityError as err:
@@ -151,6 +165,48 @@ def create():
 
     flash(f'Курс {course.name} был успешно добавлен!', 'success')
     return redirect(url_for('courses.index'))
+
+
+
+@bp.route('/my')
+@login_required
+def my_courses():
+    courses = (db.session.query(Course)
+               .filter(Course.author_id == current_user.id)
+               .options(joinedload(Course.author), joinedload(Course.category))
+               .order_by(Course.id.desc())
+               .all())
+    return render_template('courses/my.html', courses=courses)
+
+
+@bp.route('/<int:course_id>/delete', methods=['POST'])
+@login_required
+def delete(course_id):
+    course = db.session.get(Course, course_id)
+    if course is None:
+        flash('Курс не найден.', 'danger')
+        return redirect(url_for('courses.index'))
+
+    if current_user.id != course.author_id:
+        flash('Удалять курс может только его автор.', 'danger')
+        return redirect(url_for('courses.show', course_id=course.id))
+
+    try:
+        # Сначала удаляем связанные отзывы (если есть)
+        reviews = db.session.execute(
+            db.select(Review).where(Review.course_id == course.id)
+        ).scalars().all()
+        for rv in reviews:
+            db.session.delete(rv)
+
+        db.session.delete(course)
+        db.session.commit()
+        flash('Курс удалён.', 'success')
+        return redirect(url_for('courses.my_courses'))
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Не удалось удалить курс. ({e})', 'danger')
+        return redirect(url_for('courses.show', course_id=course.id))
 
 
 @bp.route('/<int:course_id>')

@@ -1,290 +1,238 @@
+import os
 import csv
 import io
 import sqlite3
 from datetime import datetime
 
 from flask import (
-    Blueprint,
-    Response,
-    current_app,
-    flash,
-    g,
-    redirect,
-    render_template,
-    request,
-    session,
-    url_for,
+    Blueprint, g, request, render_template,
+    session, redirect, url_for, flash, Response
 )
 
 reports_bp = Blueprint("visitlogs", __name__)
 
+DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "lab4.db")
+
 
 def get_db():
     if "db" not in g:
-        db_path = current_app.config["DB_PATH"]
-        g.db = sqlite3.connect(db_path, check_same_thread=False)
+        g.db = sqlite3.connect(DB_PATH, check_same_thread=False)
         g.db.row_factory = sqlite3.Row
     return g.db
 
 
-def get_current_user():
+def current_user():
     uid = session.get("user_id")
     if not uid:
         return None
     db = get_db()
-    return db.execute(
-        """
-        SELECT u.*, r.name AS role_name, r.description AS role_desc
+    return db.execute("""
+        SELECT u.*, r.name AS role_name
         FROM users u
         LEFT JOIN roles r ON r.id = u.role_id
-        WHERE u.id = ?
-        """,
-        (uid,),
-    ).fetchone()
+        WHERE u.id=?
+    """, (uid,)).fetchone()
 
 
-def has_right(user, right: str) -> bool:
-    if not user:
-        return False
-    rights = current_app.config.get("RIGHTS", {})
-    return right in rights.get(user["role_name"] or "", set())
+def is_admin(u) -> bool:
+    return bool(u and u["role_name"] == "admin")
+
+
+def fmt_dt(s: str) -> str:
+    # ожидаем "YYYY-MM-DD HH:MM:SS"
+    try:
+        dt = datetime.strptime(s, "%Y-%m-%d %H:%M:%S")
+        return dt.strftime("%d.%m.%Y %H:%M:%S")
+    except Exception:
+        return s
 
 
 def full_name(row) -> str:
     if not row:
         return "Неаутентифицированный пользователь"
-    parts = [
-        (row["last_name"] or "").strip(),
-        (row["first_name"] or "").strip(),
-        (row["middle_name"] or "").strip(),
-    ]
-    parts = [p for p in parts if p]
-    return " ".join(parts) if parts else (row["login"] or "Неаутентифицированный пользователь")
+    ln = (row["last_name"] or "").strip()
+    fn = (row["first_name"] or "").strip()
+    mn = (row["middle_name"] or "").strip()
+    parts = [p for p in [ln, fn, mn] if p]
+    return " ".join(parts) if parts else row["login"]
 
 
-def role_title(row) -> str:
-    if not row:
-        return "—"
-    return row["role_desc"] or row["role_name"] or "—"
-
-
-def fmt_dt(dt_value: str) -> str:
-    try:
-        return datetime.strptime(dt_value, "%Y-%m-%d %H:%M:%S").strftime("%d.%m.%Y %H:%M:%S")
-    except Exception:
-        return dt_value
-
-
-def require_login_or_redirect():
-    if get_current_user() is None:
+def require_login():
+    if not current_user():
         flash("Пожалуйста, войдите в систему.", "warning")
-        return redirect(url_for("login", next=request.path))
+        return redirect(url_for("login", next="/lab5" + request.path))
     return None
 
 
-def require_logs_access():
-    user = get_current_user()
-    if not user:
-        return False, redirect(url_for("login", next=request.path))
-    if has_right(user, "visitlogs.view_all") or has_right(user, "visitlogs.view_self"):
-        return True, None
-    flash("У вас недостаточно прав для доступа к данной странице.", "danger")
-    return False, redirect(url_for("index"))
-
-
-def require_admin_report(report_right: str):
-    user = get_current_user()
-    if not user:
-        flash("Пожалуйста, войдите в систему.", "warning")
-        return False, redirect(url_for("login", next=request.path))
-    if has_right(user, report_right):
-        return True, None
-    flash("У вас недостаточно прав для доступа к данной странице.", "danger")
-    return False, redirect(url_for("index"))
-
-
-@reports_bp.route("/")
+@reports_bp.route("/", methods=["GET"])
 def logs_index():
-    ok, response = require_logs_access()
-    if not ok:
-        return response
+    r = require_login()
+    if r:
+        return r
 
     db = get_db()
-    user = get_current_user()
+    u = current_user()
 
-    page = request.args.get("page", default=1, type=int) or 1
-    per_page = request.args.get("per_page", default=10, type=int) or 10
+    page = int(request.args.get("page", 1))
+    per_page = int(request.args.get("per_page", 10))
     if per_page not in (5, 10, 20, 50):
         per_page = 10
-    if page < 1:
-        page = 1
     offset = (page - 1) * per_page
 
-    if has_right(user, "visitlogs.view_all"):
+    # admin видит всё, user — только свои записи
+    if is_admin(u):
         total = db.execute("SELECT COUNT(*) AS c FROM visit_logs").fetchone()["c"]
-        rows = db.execute(
-            """
+        rows = db.execute("""
             SELECT vl.*, u.login, u.last_name, u.first_name, u.middle_name
             FROM visit_logs vl
             LEFT JOIN users u ON u.id = vl.user_id
-            ORDER BY vl.created_at DESC, vl.id DESC
+            ORDER BY vl.created_at DESC
             LIMIT ? OFFSET ?
-            """,
-            (per_page, offset),
-        ).fetchall()
+        """, (per_page, offset)).fetchall()
+        can_reports = True
     else:
-        total = db.execute(
-            "SELECT COUNT(*) AS c FROM visit_logs WHERE user_id = ?",
-            (user["id"],),
-        ).fetchone()["c"]
-        rows = db.execute(
-            """
+        total = db.execute("SELECT COUNT(*) AS c FROM visit_logs WHERE user_id=?", (u["id"],)).fetchone()["c"]
+        rows = db.execute("""
             SELECT vl.*, u.login, u.last_name, u.first_name, u.middle_name
             FROM visit_logs vl
             LEFT JOIN users u ON u.id = vl.user_id
-            WHERE vl.user_id = ?
-            ORDER BY vl.created_at DESC, vl.id DESC
+            WHERE vl.user_id=?
+            ORDER BY vl.created_at DESC
             LIMIT ? OFFSET ?
-            """,
-            (user["id"], per_page, offset),
-        ).fetchall()
+        """, (u["id"], per_page, offset)).fetchall()
+        can_reports = False  # отчёты — только админу (по ТЗ это логично)
 
-    items = []
-    for i, row in enumerate(rows, start=offset + 1):
-        items.append(
-            {
-                "n": i,
-                "user": "Неаутентифицированный пользователь" if row["user_id"] is None else full_name(row),
-                "path": row["path"],
-                "created_at": fmt_dt(row["created_at"]),
-            }
-        )
+    # подготовим данные для шаблона
+    logs = []
+    for i, row in enumerate(rows, start=1 + offset):
+        logs.append({
+            "n": i,
+            "user": full_name(row) if row["user_id"] else "Неаутентифицированный пользователь",
+            "path": row["path"],
+            "dt": fmt_dt(row["created_at"]),
+        })
 
-    pages_count = max(1, (total + per_page - 1) // per_page)
-    if page > pages_count:
-        page = pages_count
+    pages = max(1, (total + per_page - 1) // per_page)
 
     return render_template(
         "visit_logs/index.html",
-        logs=items,
+        logs=logs,
         page=page,
-        pages_count=pages_count,
+        pages=pages,
         per_page=per_page,
-        total=total,
-        can_reports=has_right(user, "reports.pages") or has_right(user, "reports.users"),
-        current_role_title=role_title(user),
+        can_reports=can_reports,
     )
 
 
-@reports_bp.route("/report/pages")
+@reports_bp.route("/report/pages", methods=["GET"])
 def report_pages():
-    ok, response = require_admin_report("reports.pages")
-    if not ok:
-        return response
+    r = require_login()
+    if r:
+        return r
+    if not is_admin(current_user()):
+        flash("У вас недостаточно прав для доступа к данной странице.", "danger")
+        return redirect(url_for("index"))
 
-    rows = get_db().execute(
-        """
-        SELECT path, COUNT(*) AS visits_count
+    db = get_db()
+    rows = db.execute("""
+        SELECT path, COUNT(*) AS cnt
         FROM visit_logs
         GROUP BY path
-        ORDER BY visits_count DESC, path ASC
-        """
-    ).fetchall()
+        ORDER BY cnt DESC
+    """).fetchall()
 
-    items = [{"n": i, "page": row["path"], "cnt": row["visits_count"]} for i, row in enumerate(rows, start=1)]
-    return render_template("visit_logs/report_pages.html", rows=items)
+    data = [{"n": i + 1, "page": r["path"], "cnt": r["cnt"]} for i, r in enumerate(rows)]
+    return render_template("visit_logs/report_pages.html", rows=data, data=data, items=data, report=data)
 
 
-@reports_bp.route("/report/users")
+@reports_bp.route("/report/users", methods=["GET"])
 def report_users():
-    ok, response = require_admin_report("reports.users")
-    if not ok:
-        return response
+    r = require_login()
+    if r:
+        return r
+    if not is_admin(current_user()):
+        flash("У вас недостаточно прав для доступа к данной странице.", "danger")
+        return redirect(url_for("index"))
 
-    rows = get_db().execute(
-        """
+    db = get_db()
+    rows = db.execute("""
         SELECT
-            COALESCE(u.id, 0) AS uid,
-            u.login, u.last_name, u.first_name, u.middle_name,
-            COUNT(*) AS visits_count
+          COALESCE(u.id, 0) AS uid,
+          u.login, u.last_name, u.first_name, u.middle_name,
+          COUNT(*) AS cnt
         FROM visit_logs vl
         LEFT JOIN users u ON u.id = vl.user_id
-        GROUP BY COALESCE(u.id, 0), u.login, u.last_name, u.first_name, u.middle_name
-        ORDER BY visits_count DESC, uid ASC
-        """
-    ).fetchall()
+        GROUP BY uid
+        ORDER BY cnt DESC
+    """).fetchall()
 
     out = []
-    for i, row in enumerate(rows, start=1):
-        if row["uid"] == 0:
-            user_label = "Неаутентифицированный пользователь"
-        else:
-            user_label = full_name(row)
-        out.append({"n": i, "user": user_label, "cnt": row["visits_count"]})
-    return render_template("visit_logs/report_users.html", rows=out)
+    for i, r in enumerate(rows):
+        user_label = "Неаутентифицированный пользователь" if r["uid"] == 0 else full_name(r)
+        out.append({"n": i + 1, "user": user_label, "cnt": r["cnt"]})
+    return render_template("visit_logs/report_users.html", rows=out, data=out, items=out, report=out)
 
 
-@reports_bp.route("/export/pages.csv")
+@reports_bp.route("/export/pages.csv", methods=["GET"])
 def export_pages_csv():
-    ok, response = require_admin_report("reports.export")
-    if not ok:
-        return response
+    r = require_login()
+    if r:
+        return r
+    if not is_admin(current_user()):
+        flash("У вас недостаточно прав для доступа к данной странице.", "danger")
+        return redirect(url_for("index"))
 
-    rows = get_db().execute(
-        """
-        SELECT path, COUNT(*) AS visits_count
+    db = get_db()
+    rows = db.execute("""
+        SELECT path, COUNT(*) AS cnt
         FROM visit_logs
         GROUP BY path
-        ORDER BY visits_count DESC, path ASC
-        """
-    ).fetchall()
+        ORDER BY cnt DESC
+    """).fetchall()
 
     buf = io.StringIO()
-    writer = csv.writer(buf, delimiter=';')
-    writer.writerow(["№", "Страница", "Количество посещений"])
-    for i, row in enumerate(rows, start=1):
-        writer.writerow([i, row["path"], row["visits_count"]])
+    w = csv.writer(buf)
+    w.writerow(["№", "Страница", "Количество посещений"])
+    for i, r in enumerate(rows, start=1):
+        w.writerow([i, r["path"], r["cnt"]])
 
-    data = buf.getvalue().encode("utf-8-sig")
     return Response(
-        data,
+        buf.getvalue(),
         mimetype="text/csv; charset=utf-8",
-        headers={"Content-Disposition": "attachment; filename=report_pages.csv"},
+        headers={"Content-Disposition": "attachment; filename=report_pages.csv"}
     )
 
 
-@reports_bp.route("/export/users.csv")
+@reports_bp.route("/export/users.csv", methods=["GET"])
 def export_users_csv():
-    ok, response = require_admin_report("reports.export")
-    if not ok:
-        return response
+    r = require_login()
+    if r:
+        return r
+    if not is_admin(current_user()):
+        flash("У вас недостаточно прав для доступа к данной странице.", "danger")
+        return redirect(url_for("index"))
 
-    rows = get_db().execute(
-        """
+    db = get_db()
+    rows = db.execute("""
         SELECT
-            COALESCE(u.id, 0) AS uid,
-            u.login, u.last_name, u.first_name, u.middle_name,
-            COUNT(*) AS visits_count
+          COALESCE(u.id, 0) AS uid,
+          u.login, u.last_name, u.first_name, u.middle_name,
+          COUNT(*) AS cnt
         FROM visit_logs vl
         LEFT JOIN users u ON u.id = vl.user_id
-        GROUP BY COALESCE(u.id, 0), u.login, u.last_name, u.first_name, u.middle_name
-        ORDER BY visits_count DESC, uid ASC
-        """
-    ).fetchall()
+        GROUP BY uid
+        ORDER BY cnt DESC
+    """).fetchall()
 
     buf = io.StringIO()
-    writer = csv.writer(buf, delimiter=';')
-    writer.writerow(["№", "Пользователь", "Количество посещений"])
-    for i, row in enumerate(rows, start=1):
-        if row["uid"] == 0:
-            user_label = "Неаутентифицированный пользователь"
-        else:
-            user_label = full_name(row)
-        writer.writerow([i, user_label, row["visits_count"]])
+    w = csv.writer(buf)
+    w.writerow(["№", "Пользователь", "Количество посещений"])
+    for i, r in enumerate(rows, start=1):
+        user_label = "Неаутентифицированный пользователь" if r["uid"] == 0 else full_name(r)
+        w.writerow([i, user_label, r["cnt"]])
 
-    data = buf.getvalue().encode("utf-8-sig")
     return Response(
-        data,
+        buf.getvalue(),
         mimetype="text/csv; charset=utf-8",
-        headers={"Content-Disposition": "attachment; filename=report_users.csv"},
+        headers={"Content-Disposition": "attachment; filename=report_users.csv"}
     )
