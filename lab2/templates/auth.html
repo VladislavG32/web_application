@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Lab2 — Форма авторизации{% endblock %}
+
+{% block content %}
+<div class="card shadow-sm mb-4">
+  <div class="card-body">
+    <h2 class="h5 mb-2">Форма авторизации</h2>
+    <p class="text-muted mb-0">
+      После отправки формы на страницу выводятся введённые данные (параметры формы / <code>request.form</code>).
+    </p>
+  </div>
+</div>
+
+<div class="card shadow-sm mb-4">
+  <div class="card-body">
+    <form method="post" action="{{ url_for('auth') }}" class="p-0 border-0 m-0 bg-transparent">
+      <div class="mb-3">
+        <label for="login" class="form-label">Логин</label>
+        <input type="text" class="form-control" id="login" name="login" value="{{ form_data.login }}">
+      </div>
+
+      <div class="mb-3">
+        <label for="password" class="form-label">Пароль</label>
+        <input type="password" class="form-control" id="password" name="password" value="{{ form_data.password }}">
+      </div>
+
+      <button type="submit" class="btn btn-primary">Войти</button>
+    </form>
+  </div>
+</div>
+
+{% if submitted %}
+  <div class="card shadow-sm mb-4 border-success">
+    <div class="card-body">
+      <h3 class="h6">Введённые данные</h3>
+      <ul class="mb-3">
+        <li><b>Логин:</b> {{ form_data.login }}</li>
+        <li><b>Пароль:</b> {{ form_data.password }}</li>
+      </ul>
+
+      <h4 class="h6">Параметры формы (request.form)</h4>
+      <pre><code>{{ form_params | tojson(indent=2) }}</code></pre>
+    </div>
+  </div>
+{% endif %}
+
+<div class="card shadow-sm">
+  <div class="card-body">
+    <h3 class="h6">Служебная информация о текущем запросе</h3>
+    <div class="table-responsive">
+      <table class="table table-bordered align-middle mb-0">
+        <tbody>
+          <tr><th style="width:220px;">Метод</th><td>{{ meta.method }}</td></tr>
+          <tr><th>URL</th><td>{{ meta.url }}</td></tr>
+          <tr><th>Path</th><td>{{ meta.path }}</td></tr>
+          <tr><th>Full path</th><td>{{ meta.full_path }}</td></tr>
+          <tr><th>Remote addr</th><td>{{ meta.remote_addr }}</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

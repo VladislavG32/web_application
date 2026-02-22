@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Lab2 — {{ title }}{% endblock %}
+
+{% block content %}
+<div class="card shadow-sm mb-4">
+  <div class="card-body">
+    <h2 class="h5 mb-2">{{ title }}</h2>
+    {% if lead %}
+      <p class="text-muted mb-0">{{ lead }}</p>
+    {% endif %}
+  </div>
+</div>
+
+<div class="card shadow-sm mb-4">
+  <div class="card-body">
+    <h3 class="h6">Служебная информация о запросе</h3>
+    <div class="table-responsive">
+      <table class="table table-bordered align-middle mb-0">
+        <tbody>
+          <tr><th style="width:220px;">Метод</th><td>{{ meta.method }}</td></tr>
+          <tr><th>URL</th><td>{{ meta.url }}</td></tr>
+          <tr><th>Path</th><td>{{ meta.path }}</td></tr>
+          <tr><th>Full path</th><td>{{ meta.full_path }}</td></tr>
+          <tr><th>Remote addr</th><td>{{ meta.remote_addr }}</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="card shadow-sm">
+  <div class="card-body">
+    <h3 class="h6">{{ payload_title }}</h3>
+    <pre><code>{{ payload | tojson(indent=2) }}</code></pre>
+  </div>
+</div>
+{% endblock %}

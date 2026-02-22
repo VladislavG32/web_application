@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Lab3 — {{ note.title }}{% endblock %}
+
+{% block content %}
+<div class="card">
+  <p class="muted" style="margin-top:0;"><a href="{{ url_for('index') }}">← Назад к списку</a></p>
+
+  <h2 style="margin:0 0 8px;">{{ note.title }}</h2>
+  <div class="note-meta">ID: {{ note.id }} • Создано: {{ note.created_at }}</div>
+
+  <hr style="border-color: rgba(255,255,255,.08); margin: 16px 0;">
+  <div style="white-space: pre-wrap; line-height:1.6;">{{ note.text }}</div>
+
+  <div class="actions" style="margin-top:18px;">
+    <a class="btn" href="{{ url_for('edit', note_id=note.id) }}">Редактировать</a>
+    <form method="post" action="{{ url_for('delete', note_id=note.id) }}" style="display:inline;" onsubmit="return confirm('Удалить заметку #{{ note.id }}?');">
+      <button type="submit" class="btn-danger">Удалить</button>
+    </form>
+    <a class="btn" href="{{ url_for('index') }}">К списку</a>
+  </div>
+</div>
+{% endblock %}

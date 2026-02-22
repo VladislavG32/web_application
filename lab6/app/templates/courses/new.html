@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="page-grid">
+  <section class="panel">
+    <h2 style="margin-top:0;">Создание курса</h2>
+
+    <form method="POST" action="{{ url_for('courses.create') }}" enctype="multipart/form-data">
+      <input type="hidden" name="author_id" value="{{ current_user.id }}">
+
+      <div class="page-grid" style="grid-template-columns:1fr 1fr; align-items:start;">
+        <div>
+          <div class="field">
+            <label for="name">Название</label>
+            <input type="text" name="name" id="name" value="{{ course.name or '' }}">
+          </div>
+
+          <div class="field">
+            <label for="category">Категория</label>
+            <select name="category_id" id="category">
+              {% for category in categories %}
+                <option {% if course.category_id == category.id | string %}selected{% endif %} value="{{ category.id }}">
+                  {{ category.name }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="teachers">Преподаватели</label>
+            <select name="teachers_ids" id="teachers" multiple style="min-height:160px;">
+              {% for user in users %}
+                <option value="{{ user.id }}" {% if user.id == current_user.id or course.author_id == user.id | string %}selected{% endif %}>
+                  {{ user.full_name }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="short_description">Краткое описание</label>
+            <textarea name="full_desc" id="full_description" cols="30" rows="10" required>{{ course.full_desc or '' }}</textarea>
+          </div>
+        </div>
+
+        <div>
+          <div class="field">
+            <label for="background_img">Фоновое изображение</label>
+            <input type="file" name="background_img" id="background_img">
+          </div>
+
+          <div class="panel background-preview" style="display:grid; place-items:center; min-height:260px;">
+            <img src="#" class="img-fluid d-none" alt="">
+            <label for="background_img" class="btn">Выбрать изображение</label>
+          </div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="full_description">Полное описание</label>
+        <textarea name="full_desc" id="full_description" cols="30" rows="10">{{ course.full_desc or '' }}</textarea>
+      </div>
+
+      <div class="row-actions" style="justify-content:center;">
+        <input type="submit" class="btn" value="Сохранить">
+      </div>
+    </form>
+  </section>
+</div>
+{% endblock %}

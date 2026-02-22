@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% from 'pagination.html' import render_pagination %}
+
+{% block content %}
+<div class="page-grid">
+  <section class="panel">
+    <div class="toolbar">
+      <h1 style="margin:0;">Отзывы о курсе: {{ course.name }}</h1>
+      <a class="btn" href="{{ url_for('courses.show', course_id=course.id) }}">← Назад к курсу</a>
+    </div>
+
+    <form method="get" style="margin: 10px 0 14px;">
+      <div class="toolbar" style="align-items:end;">
+        <div class="field" style="margin:0; min-width:280px;">
+          <label for="sort">Порядок сортировки</label>
+          <select id="sort" name="sort">
+            {% for key, title in sort_options.items() %}
+              <option value="{{ key }}" {% if current_sort == key %}selected{% endif %}>{{ title }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <button class="btn" type="submit">Применить</button>
+      </div>
+    </form>
+
+    {% if reviews %}
+      <div class="page-grid">
+        {% for r in reviews %}
+          <div class="panel">
+            <div class="toolbar" style="margin-bottom:8px; gap:10px;">
+              <div>
+                <div><strong>{{ r.user.full_name if r.user else 'Неизвестный пользователь' }}</strong></div>
+                <div style="opacity:.8; font-size:14px;">Оценка: {{ r.rating }}/5</div>
+              </div>
+              <div style="opacity:.7; font-size:13px; margin-left:auto; text-align:right;">
+                {{ r.created_at.strftime('%d.%m.%Y %H:%M') if r.created_at else '' }}
+              </div>
+            </div>
+            <div style="white-space:pre-wrap; line-height:1.5;">{{ r.text }}</div>
+          </div>
+        {% endfor %}
+      </div>
+
+      <div class="panel" style="margin-top:12px;">
+        {{ render_pagination(pagination, request.endpoint, {'sort': current_sort}) }}
+      </div>
+    {% else %}
+      <p style="opacity:.75; margin:0;">Пока нет отзывов.</p>
+    {% endif %}
+
+    {% if current_user.is_authenticated %}
+      <div class="panel" style="margin-top:14px;">
+        {% if my_review %}
+          <h3 style="margin-top:0;">Ваш отзыв</h3>
+          <div class="panel" style="padding:12px;">
+            <div class="toolbar" style="margin-bottom:8px;">
+              <div><strong>Оценка:</strong> {{ my_review.rating }}/5</div>
+              <div style="opacity:.7; font-size:13px;">
+                {{ my_review.created_at.strftime('%d.%m.%Y %H:%M') if my_review.created_at else '' }}
+              </div>
+            </div>
+            <div style="white-space:pre-wrap; line-height:1.5;">{{ my_review.text }}</div>
+          </div>
+          <p style="margin:10px 0 0; opacity:.8;">Вы уже оставили отзыв для этого курса.</p>
+        {% else %}
+          <h3 style="margin-top:0;">Оставить отзыв</h3>
+          <form method="post" action="{{ url_for('courses.create_review', course_id=course.id) }}">
+            <input type="hidden" name="next_url" value="{{ request.full_path.rstrip('?') }}">
+
+            <div class="field">
+              <label for="rating">Оценка</label>
+              <select id="rating" name="rating" required>
+                {% for value, label in rating_choices %}
+                  <option value="{{ value }}" {% if value == 5 %}selected{% endif %}>{{ label|capitalize }}</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="review_text">Текст отзыва</label>
+              <textarea id="review_text" name="text" rows="4" required></textarea>
+            </div>
+
+            <button class="btn" type="submit">Отправить</button>
+          </form>
+        {% endif %}
+      </div>
+    {% else %}
+      <p style="margin-top:14px;">
+        Чтобы оставить отзыв, нужно <a href="{{ url_for('auth.login') }}">войти</a>.
+      </p>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

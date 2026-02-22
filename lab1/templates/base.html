@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Lab1{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='shared.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="container">
+    <header class="topbar" style="background:#1f2937; border-color:#1f2937; border-radius:0; margin:-20px calc((100vw - 100%) / -2) 18px; padding:14px max(16px, calc((100vw - 1000px)/2 + 16px));">
+      <div>
+        <h1 style="color:#fff; font-size:20px; margin:0;">
+          <a href="{{ url_for('index') }}" style="text-decoration:none;color:inherit;">
+            Лабораторная работа №1
+          </a>
+        </h1>
+      </div>
+
+      <nav style="display:flex; gap:10px; flex-wrap:wrap;">
+        <a class="btn" href="{{ url_for('task') }}" style="background:transparent; color:#fff; border-color:#4b5563;">Задание</a>
+        <a class="btn" href="{{ url_for('index') }}" style="background:transparent; color:#fff; border-color:#4b5563;">Посты</a>
+        <a class="btn" href="{{ url_for('about') }}" style="background:transparent; color:#fff; border-color:#4b5563;">Об авторе</a>
+      </nav>
+    </header>
+
+    {% block content %}{% endblock %}
+
+    <footer style="margin-top: 24px; padding: 16px 0; color: #666; border-top: 1px solid #ddd;">
+      <div>
+        Остапенко Владислав Русланович • Группа 241-3211
+      </div>
+    </footer>
+  </div>
+</body>
+</html>

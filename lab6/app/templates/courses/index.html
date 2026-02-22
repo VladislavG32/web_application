@@ -1,0 +1,81 @@
+{% extends 'base.html' %}
+{% from 'pagination.html' import render_pagination %}
+
+{% block content %}
+<div class="page-grid">
+  <section class="panel">
+    <div class="toolbar">
+      <h2 style="margin:0;">Каталог курсов</h2>
+      <span class="badge">Найдено: {{ courses|length }}</span>
+    </div>
+
+    <form method="get">
+      <div class="page-grid" style="grid-template-columns:2fr 1fr auto; align-items:end;">
+        <div class="field" style="margin-bottom:0;">
+          <label for="course-name">Название курса</label>
+          <input autocomplete="off" type="text" id="course-name" name="name"
+                 value="{{ request.args.get('name') or '' }}" placeholder="Название курса">
+        </div>
+
+        <div class="field" style="margin-bottom:0;">
+          <label for="course-category">Категория</label>
+          <select id="course-category" name="category_ids" title="Категория курса">
+            <option value="">Выберите категорию</option>
+            {% for category in categories %}
+              <option value="{{ category.id }}" {% if category.id | string in request.args.getlist('category_ids') %}selected{% endif %}>
+                {{ category.name }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="row-actions" style="justify-content:flex-end;">
+          <button type="submit" class="btn">Найти</button>
+        </div>
+      </div>
+    </form>
+  </section>
+
+  <section class="page-grid">
+    {% for course in courses %}
+      <article class="panel" onclick="window.location='{{ url_for('courses.show', course_id=course.id) }}'" style="cursor:pointer;">
+        <div style="display:grid; grid-template-columns:220px 1fr; gap:16px; align-items:start;">
+          <div>
+            <div style="
+              width:100%;
+              height:140px;
+              border-radius:12px;
+              background-size:cover;
+              background-position:center;
+              background-image:url('{{ url_for('image', image_id=course.background_image_id) }}');
+              border:1px solid rgba(255,255,255,.08);
+            "></div>
+          </div>
+
+          <div>
+            <div class="toolbar" style="margin-bottom:6px;">
+              <h3 style="margin:0;">{{ course.name }}</h3>
+              <span class="badge">★ {{ "%.2f"|format(course.rating) }}</span>
+            </div>
+
+            <div style="opacity:.75; margin-bottom:8px;">Автор: {{ course.author.full_name }}</div>
+            <div style="line-height:1.55;">{{ course.short_desc | truncate(200) }}</div>
+          </div>
+        </div>
+      </article>
+    {% else %}
+      <div class="panel">Курсы не найдены. Попробуй изменить параметры поиска.</div>
+    {% endfor %}
+  </section>
+
+  <section class="panel">
+    {{ render_pagination(pagination, request.endpoint, search_params) }}
+  </section>
+
+  {% if current_user.is_authenticated %}
+    <div class="row-actions" style="justify-content:center;">
+      <a class="btn" href="{{ url_for('courses.new') }}">Создать курс</a>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

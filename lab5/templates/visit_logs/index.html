@@ -1,0 +1,81 @@
+{% extends 'base.html' %}
+{% block title %}{{ app_title }} — Журнал посещений{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="table-toolbar">
+    <div class="left">
+      <h2 style="margin:0">Журнал посещений</h2>
+      <span class="badge">Всего записей: {{ total }}</span>
+      <span class="badge">Страница {{ page }} / {{ pages_count }}</span>
+      <span class="badge">Роль: {{ current_role_title }}</span>
+    </div>
+    <div class="right row-actions">
+      <a class="btn-lite" href="{{ url_for('index') }}">К пользователям</a>
+    </div>
+  </div>
+
+  {% if can_reports %}
+  <div class="card" style="background:#f8fafc;">
+    <div class="table-toolbar" style="margin-bottom:0;">
+      <div class="left"><strong>Отчёты</strong></div>
+      <div class="right row-actions">
+        <a class="btn-lite" href="{{ url_for('visitlogs.report_pages') }}">Отчёт по страницам</a>
+        <a class="btn-lite" href="{{ url_for('visitlogs.report_users') }}">Отчёт по пользователям</a>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="table-toolbar">
+    <div class="left muted">Показывать по:</div>
+    <div class="right row-actions">
+      {% for n in [5,10,20,50] %}
+        {% if n == per_page %}
+          <span class="badge">{{ n }}</span>
+        {% else %}
+          <a class="btn-lite" href="{{ url_for('visitlogs.logs_index', page=1, per_page=n) }}">{{ n }}</a>
+        {% endif %}
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th style="width:70px">№</th>
+          <th>Пользователь</th>
+          <th>Страница</th>
+          <th style="width:220px">Дата и время</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in logs %}
+          <tr>
+            <td>{{ row.n }}</td>
+            <td>{{ row.user }}</td>
+            <td><span class="code-lite">{{ row.path }}</span></td>
+            <td class="nowrap">{{ row.created_at }}</td>
+          </tr>
+        {% else %}
+          <tr><td colspan="4">Нет записей журнала.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="table-toolbar" style="margin-top:10px;">
+    <div class="left">
+      {% if page > 1 %}
+        <a class="btn-lite" href="{{ url_for('visitlogs.logs_index', page=page-1, per_page=per_page) }}">← Назад</a>
+      {% endif %}
+    </div>
+    <div class="right">
+      {% if page < pages_count %}
+        <a class="btn-lite" href="{{ url_for('visitlogs.logs_index', page=page+1, per_page=per_page) }}">Вперёд →</a>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

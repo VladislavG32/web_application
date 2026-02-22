@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Lab3 — Главная{% endblock %}
+
+{% block content %}
+  <div class="card">
+    <h1 style="margin-top:0;">Главная страница</h1>
+    <p class="muted">
+      Лабораторная работа №3: аутентификация пользователей и работа с сессией.
+    </p>
+
+    {% if current_user.is_authenticated %}
+      <p class="alert alert-success" style="margin-top:12px;">
+        Вы авторизованы как <b>{{ current_user.username }}</b>.
+      </p>
+      <p style="display:flex; gap:10px; flex-wrap:wrap; margin:0;">
+        <a class="btn" href="{{ url_for('counter') }}">Открыть счётчик посещений</a>
+        <a class="btn btn-primary" href="{{ url_for('secret') }}">Открыть секретную страницу</a>
+      </p>
+    {% else %}
+      <p>Для доступа к секретной странице выполните вход.</p>
+      <p style="display:flex; gap:10px; flex-wrap:wrap; margin:0;">
+        <a class="btn" href="{{ url_for('counter') }}">Открыть счётчик посещений</a>
+        <a class="btn btn-primary" href="{{ url_for('login') }}">Войти</a>
+      </p>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <h2 style="margin-top:0;">Тестовые данные для входа (по ТЗ)</h2>
+    <ul style="margin:0;">
+      <li>Логин: <code>user</code></li>
+      <li>Пароль: <code>qwerty</code></li>
+    </ul>
+  </div>
+{% endblock %}

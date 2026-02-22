@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div style="min-height: calc(100vh - 140px); display:grid; place-items:center;">
+  <div class="panel" style="width:100%; max-width:520px;">
+    <h2 style="margin-top:0;">Вход в систему</h2>
+    <p style="opacity:.8; margin-top:-4px;">Введите логин и пароль для доступа к порталу.</p>
+
+    <form method="POST">
+      <div class="field">
+        <label for="login">Логин</label>
+        <input autocomplete="off" type="text" name="login" id="login"
+               value="{{ request.form.login }}" required>
+      </div>
+
+      <div class="field">
+        <label for="password">Пароль</label>
+        <input type="password" id="password" name="password" required>
+      </div>
+
+      <div class="toolbar" style="margin:10px 0 14px;">
+        <label style="display:flex; gap:8px; align-items:center; margin:0;">
+          <input type="checkbox" id="remember_me" name="remember_me" style="width:auto;">
+          <span>Запомнить меня</span>
+        </label>
+        <a href="#" style="opacity:.85;">Забыли пароль?</a>
+      </div>
+
+      <button type="submit" class="btn" style="width:100%;">Войти</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

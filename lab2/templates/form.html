@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Lab2 — Проверка телефона{% endblock %}
+
+{% block content %}
+<div class="card shadow-sm mb-4">
+  <div class="card-body">
+    <h2 class="h5 mb-2">Проверка номера телефона</h2>
+    <p class="text-muted mb-0">
+      Введите номер телефона и нажмите <b>«Проверить»</b>.
+      Допустимые символы: цифры, пробелы, круглые скобки, дефисы, точки, плюс.
+    </p>
+  </div>
+</div>
+
+<div class="card shadow-sm mb-4">
+  <div class="card-body">
+    <form method="post" action="{{ url_for('phone_form') }}" novalidate class="p-0 border-0 m-0 bg-transparent">
+      <div class="mb-3">
+        <label for="phone" class="form-label">Номер телефона</label>
+        <input
+          type="text"
+          class="form-control {% if error %}is-invalid{% endif %}"
+          id="phone"
+          name="phone"
+          value="{{ phone_input }}"
+          placeholder="+7 (123) 456-75-90"
+        >
+        {% if error %}
+          <div class="invalid-feedback d-block">{{ error }}</div>
+        {% endif %}
+      </div>
+
+      <button type="submit" class="btn btn-primary">Проверить</button>
+    </form>
+  </div>
+</div>
+
+{% if checked and not error %}
+  <div class="alert alert-success shadow-sm">
+    <div><b>Номер корректен.</b></div>
+    <div>Форматированный номер: <code>{{ phone_formatted }}</code></div>
+  </div>
+{% endif %}
+
+<div class="card shadow-sm">
+  <div class="card-body">
+    <h3 class="h6 mb-3">Примеры допустимого ввода</h3>
+    <ul class="mb-0">
+      <li><code>+7 (123) 456-75-90</code></li>
+      <li><code>8(123)4567590</code></li>
+      <li><code>123.456.75.90</code></li>
+    </ul>
+  </div>
+</div>
+{% endblock %}

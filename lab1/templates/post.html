@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}{{ post.title }} — Lab1{% endblock %}
+
+{% block content %}
+<article class="card">
+  <p class="muted" style="margin-top:0;">
+    <a href="{{ url_for('index') }}">← Назад к списку</a>
+  </p>
+
+  <h2 style="margin:0 0 8px;">{{ post.title }}</h2>
+  <p class="muted">{{ post.author }} • {{ post.date }}</p>
+
+  <img
+    src="{{ url_for('static', filename=post.image) }}"
+    alt=""
+    style="width:100%; max-height:420px; object-fit:cover; border-radius:14px; margin:12px 0 16px;"
+  >
+
+  {% for paragraph in post.text.split('\n\n') %}
+    <p>{{ paragraph }}</p>
+  {% endfor %}
+</article>
+
+<section class="card">
+  <h3 style="margin-top:0;">Оставьте комментарий</h3>
+  <form method="post">
+    <textarea
+      name="comment_text"
+      rows="4"
+      style="width:100%; padding:12px; border-radius:10px; border:1px solid #ccc;"
+      placeholder="Напишите комментарий..."
+    ></textarea>
+    <div style="margin-top:10px;">
+      <button class="btn" type="submit">Отправить</button>
+    </div>
+  </form>
+</section>
+
+<section class="card">
+  <h3 style="margin-top:0;">Комментарии ({{ post.comments|length }})</h3>
+
+  {% if post.comments %}
+    <div style="display:grid; gap:12px;">
+      {% for c in post.comments %}
+        <div style="border:1px solid rgba(127,127,127,.2); border-radius:12px; padding:12px;">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <img
+              src="{{ url_for('static', filename=c.avatar) }}"
+              alt=""
+              style="width:36px; height:36px; border-radius:999px; object-fit:cover;"
+            >
+            <strong>{{ c.author }}</strong>
+          </div>
+
+          <p style="margin:10px 0 0;">{{ c.text }}</p>
+
+          {% if c.replies %}
+            <div style="margin-top:10px; margin-left:46px; display:grid; gap:8px;">
+              {% for r in c.replies %}
+                <div style="border-left:3px solid #ddd; padding-left:10px;">
+                  <div style="display:flex; align-items:center; gap:8px;">
+                    <img
+                      src="{{ url_for('static', filename=r.avatar) }}"
+                      alt=""
+                      style="width:28px; height:28px; border-radius:999px; object-fit:cover;"
+                    >
+                    <strong style="font-size:14px;">{{ r.author }}</strong>
+                  </div>
+                  <p style="margin:6px 0 0; font-size:14px;">{{ r.text }}</p>
+                </div>
+              {% endfor %}
+            </div>
+          {% endif %}
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <p class="muted">Комментариев пока нет.</p>
+  {% endif %}
+</section>
+{% endblock %}

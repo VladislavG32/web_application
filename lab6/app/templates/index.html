@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="page-grid">
+  <section class="panel" style="text-align:center; padding:32px 20px;">
+    <h1 style="margin:0 0 12px; font-size:2rem;">Образовательный портал</h1>
+    <p style="max-width:900px; margin:0 auto; opacity:.9; line-height:1.6;">
+      Мы создаем и продвигаем технологии онлайн-образования как эффективный
+      образовательный инструмент, который будет способствовать повышению
+      доступности и качества образования.
+    </p>
+  </section>
+
+  <section class="panel">
+    <div class="toolbar">
+      <h2 style="margin:0;">Поиск курсов</h2>
+      <span class="badge">Каталог</span>
+    </div>
+
+    <form action="{{ url_for('courses.index') }}" method="get">
+      <div class="page-grid" style="grid-template-columns: 2fr 1fr auto; align-items:end;">
+        <div class="field" style="margin-bottom:0;">
+          <label for="course-name">Название курса</label>
+          <input autocomplete="off" type="text" id="course-name" name="name" placeholder="Например: Python, SQL, Flask">
+        </div>
+
+        <div class="field" style="margin-bottom:0;">
+          <label for="course-category">Категория</label>
+          <select id="course-category" name="category_ids" title="Категория курса">
+            <option value="">Выберите категорию</option>
+            {% for category in categories %}
+              <option value="{{ category.id }}">{{ category.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="row-actions" style="justify-content:flex-end;">
+          <button type="submit" class="btn">Найти</button>
+        </div>
+      </div>
+    </form>
+  </section>
+</div>
+{% endblock %}

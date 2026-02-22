@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}Lab2 — Главная{% endblock %}
+
+{% block content %}
+<div class="card shadow-sm mb-4">
+  <div class="card-body">
+    <h2 class="h5 mb-3">Что реализовано по заданию</h2>
+    <ul class="mb-0">
+      <li>Отображение параметров URL</li>
+      <li>Отображение заголовков запроса</li>
+      <li>Отображение cookie</li>
+      <li>Форма авторизации и вывод параметров формы</li>
+      <li>Форма проверки телефона с обработкой ошибок и форматированием</li>
+    </ul>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-md-6">
+    <div class="card h-100 shadow-sm">
+      <div class="card-body">
+        <h3 class="h6">Параметры URL</h3>
+        <p class="text-muted mb-3">
+          Пример вывода <code>request.args</code>.
+        </p>
+        <a class="btn btn-outline-primary"
+           href="{{ url_for('request_args_page', a='1', b='hello', group='241-3211') }}">
+          Открыть страницу URL-параметров
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-6">
+    <div class="card h-100 shadow-sm">
+      <div class="card-body">
+        <h3 class="h6">Заголовки запроса</h3>
+        <p class="text-muted mb-3">
+          Вывод <code>request.headers</code> для текущего запроса.
+        </p>
+        <a class="btn btn-outline-primary" href="{{ url_for('request_headers_page') }}">
+          Открыть страницу headers
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-6">
+    <div class="card h-100 shadow-sm">
+      <div class="card-body">
+        <h3 class="h6">Cookie</h3>
+        <p class="text-muted mb-3">
+          Вывод <code>request.cookies</code> и кнопка установки тестовой cookie.
+        </p>
+        <div class="d-flex flex-wrap gap-2">
+          <a class="btn btn-outline-primary" href="{{ url_for('request_cookies_page') }}">
+            Открыть страницу cookies
+          </a>
+          <a class="btn btn-outline-secondary" href="{{ url_for('set_demo_cookie') }}">
+            Установить demo cookie
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-6">
+    <div class="card h-100 shadow-sm">
+      <div class="card-body">
+        <h3 class="h6">Форма авторизации</h3>
+        <p class="text-muted mb-3">
+          После отправки формы выводятся введённые параметры (<code>request.form</code>).
+        </p>
+        <a class="btn btn-outline-primary" href="{{ url_for('auth') }}">
+          Открыть форму авторизации
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12">
+    <div class="card shadow-sm border-primary">
+      <div class="card-body">
+        <h3 class="h6">Форма проверки телефона (по ТЗ)</h3>
+        <p class="text-muted mb-3">
+          Проверка формата номера телефона, вывод ошибок через Bootstrap-классы
+          <code>is-invalid</code> и <code>invalid-feedback</code>, форматирование в
+          <code>8-***-***-**-**</code>.
+        </p>
+        <a class="btn btn-primary" href="{{ url_for('phone_form') }}">Открыть страницу проверки телефона</a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

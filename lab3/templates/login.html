@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Lab3 — Вход{% endblock %}
+
+{% block content %}
+  <div class="card">
+    <h1 style="margin-top:0;">Вход</h1>
+    <p class="muted">
+      Введите логин и пароль. После входа можно открыть секретную страницу.
+    </p>
+
+    {% if error %}
+      <div class="alert alert-danger">{{ error }}</div>
+    {% endif %}
+
+    <form method="post" action="{{ url_for('login') }}">
+      <input type="hidden" name="next" value="{{ next_url }}">
+
+      <div class="field">
+        <label for="username">Логин</label>
+        <input
+          id="username"
+          name="username"
+          type="text"
+          autocomplete="username"
+          value="{{ request.form.get('username', '') }}"
+          required
+        >
+      </div>
+
+      <div class="field">
+        <label for="password">Пароль</label>
+        <input
+          id="password"
+          name="password"
+          type="password"
+          autocomplete="current-password"
+          required
+        >
+      </div>
+
+      <div class="field">
+        <label style="display:flex;align-items:center;gap:8px;font-weight:normal;">
+          <input type="checkbox" name="remember" {% if request.form.get('remember') %}checked{% endif %}>
+          Запомнить меня
+        </label>
+      </div>
+
+      <button class="btn btn-primary" type="submit">Войти</button>
+    </form>
+
+    <div style="margin-top:12px" class="muted">
+      Тестовые данные: <code>user</code> / <code>qwerty</code>
+    </div>
+  </div>
+{% endblock %}

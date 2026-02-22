@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Лабораторные работы</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+      background: #f4f6f8;
+      color: #1f2328;
+    }
+    .wrap {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 30px 20px;
+    }
+    h1 { margin: 0 0 8px; font-size: 32px; }
+    .sub { margin: 0 0 20px; color: #667085; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 14px;
+    }
+    .card {
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 14px;
+      box-shadow: 0 1px 10px rgba(0,0,0,.03);
+    }
+    .card h2 { margin: 0 0 8px; font-size: 18px; }
+    .desc { color: #667085; font-size: 14px; min-height: 38px; }
+    .btn {
+      display: inline-block;
+      margin-top: 10px;
+      padding: 8px 14px;
+      border-radius: 8px;
+      background: #1677ff;
+      border: 1px solid #1677ff;
+      color: #fff;
+      text-decoration: none;
+    }
+    .btn:hover { background: #0f67df; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Навигация по лабораторным работам</h1>
+    <p class="sub">Быстрые ссылки на все лабораторные работы</p>
+
+    <div class="grid">
+      <div class="card">
+        <h2>Lab 1</h2>
+        <div class="desc">Посты, шаблоны Jinja2, комментарии</div>
+        <a class="btn" href="/lab1/">Открыть</a>
+      </div>
+
+      <div class="card">
+        <h2>Lab 2</h2>
+        <div class="desc">Маршруты и шаблоны</div>
+        <a class="btn" href="/lab2/">Открыть</a>
+      </div>
+
+      <div class="card">
+        <h2>Lab 3</h2>
+        <div class="desc">CRUD заметок</div>
+        <a class="btn" href="/lab3/">Открыть</a>
+      </div>
+
+      <div class="card">
+        <h2>Lab 4</h2>
+        <div class="desc">Авторизация, пользователи, роли</div>
+        <a class="btn" href="/lab4/login">Войти</a>
+      </div>
+
+      <div class="card">
+        <h2>Lab 5</h2>
+        <div class="desc">Журнал посещений, отчёты, CSV</div>
+        <a class="btn" href="/lab5/login">Войти</a>
+      </div>
+
+      <div class="card">
+        <h2>Lab 6</h2>
+        <div class="desc">Курсы и отзывы</div>
+        <a class="btn" href="/lab6/">Открыть</a>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

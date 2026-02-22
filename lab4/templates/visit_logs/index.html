@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}Lab4 — Журнал посещений{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="table-toolbar">
+    <div class="left">
+      <h2 style="margin:0;">Журнал посещений</h2>
+      <span class="badge">Страница {{ page }} из {{ pages }}</span>
+    </div>
+    <div class="right">
+      <a class="btn-lite" href="/lab4/">На главную</a>
+      <a class="btn-lite" href="/lab4/logout">Выйти</a>
+    </div>
+  </div>
+
+  {% if can_reports %}
+  <div class="panel" style="margin-bottom:12px;">
+    <div style="font-weight:600; margin-bottom:8px;">Отчёты (администратор)</div>
+    <div class="row-actions">
+      <a class="btn" href="/lab4/visit-logs/report/pages">Отчёт по страницам</a>
+      <a class="btn" href="/lab4/visit-logs/report/users">Отчёт по пользователям</a>
+      <a class="btn-lite" href="/lab4/visit-logs/export/pages.csv">CSV: страницы</a>
+      <a class="btn-lite" href="/lab4/visit-logs/export/users.csv">CSV: пользователи</a>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="table-toolbar">
+    <div class="left small">Показано записей: {{ logs|length }}</div>
+    <div class="right small">
+      Показывать:
+      <a href="?page=1&per_page=5">5</a> |
+      <a href="?page=1&per_page=10">10</a> |
+      <a href="?page=1&per_page=20">20</a> |
+      <a href="?page=1&per_page=50">50</a>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th style="width:90px;">№</th>
+          <th>Пользователь</th>
+          <th>Путь</th>
+          <th style="width:240px;">Дата/время</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in logs %}
+        <tr>
+          <td>{{ row.n }}</td>
+          <td>{{ row.user }}</td>
+          <td><span class="code-lite">{{ row.path }}</span></td>
+          <td>{{ row.dt }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="table-toolbar" style="margin-top:12px;">
+    <div class="left">
+      {% if page > 1 %}
+        <a class="btn-lite" href="?page={{ page-1 }}&per_page={{ per_page }}">← Назад</a>
+      {% endif %}
+    </div>
+    <div class="right">
+      <span class="small">Страница {{ page }} из {{ pages }}</span>
+      {% if page < pages %}
+        <a class="btn-lite" href="?page={{ page+1 }}&per_page={{ per_page }}">Вперёд →</a>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

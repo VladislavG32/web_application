@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} — Lab1{% endblock %}
+
+{% block content %}
+<div class="card">
+  <h2 style="margin-top:0;">{{ title }}</h2>
+
+  {% for paragraph in content.split('\n\n') %}
+    <p style="white-space: pre-line;">{{ paragraph }}</p>
+  {% endfor %}
+</div>
+{% endblock %}

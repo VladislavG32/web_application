@@ -1,0 +1,143 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="page-grid">
+  <section class="panel" style="padding:0; overflow:hidden;">
+    {% set bg_url = course.bg_image.url if course.bg_image else url_for('static', filename='images/polytech_logo.png') %}
+    <div style="position:relative; min-height:320px; background-image:url('{{ bg_url }}'); background-size:cover; background-position:center;">
+      <div style="position:absolute; inset:0; background:rgba(0,0,0,.62); display:grid; place-items:center; text-align:center; padding:24px;">
+        <div style="max-width:900px;">
+          <h1 style="margin:0 0 10px;">{{ course.name }}</h1>
+          <p style="margin:0 0 10px; opacity:.9;">
+            {{ course.category.name }} • ★ {{ "%.2f" | format(course.rating) }}
+          </p>
+          <p style="margin:0 auto 18px; max-width:780px; line-height:1.55;">
+            {{ course.short_desc }}
+          </p>
+
+          {% if current_user.is_authenticated %}
+            <a href="#" class="btn">Перейти к материалам курса</a>
+          {% else %}
+            <button class="btn" disabled style="opacity:.6; cursor:not-allowed;">Записаться</button>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2 style="margin-top:0;">О курсе</h2>
+    <div style="line-height:1.65; white-space:pre-wrap;">{{ course.full_desc }}</div>
+  </section>
+
+  <section class="panel">
+    <div class="toolbar">
+      <h2 style="margin:0;">Отзывы</h2>
+      <a class="btn" href="{{ url_for('courses.reviews', course_id=course.id) }}">Все отзывы</a>
+    </div>
+
+    {% if last_reviews %}
+      <div class="page-grid">
+        {% for r in last_reviews %}
+          <div class="panel">
+            <div class="toolbar" style="margin-bottom:8px; gap:10px;">
+              <div>
+                <div><strong>{{ r.user.full_name if r.user else 'Неизвестный пользователь' }}</strong></div>
+                <div style="opacity:.8; font-size:14px;">Оценка: {{ r.rating }}/5</div>
+              </div>
+              <div style="opacity:.7; font-size:13px; margin-left:auto; text-align:right;">
+                {{ r.created_at.strftime('%d.%m.%Y %H:%M') if r.created_at else '' }}
+              </div>
+            </div>
+            <div style="white-space:pre-wrap; line-height:1.5;">{{ r.text }}</div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p style="opacity:.75; margin:0;">Пока нет отзывов.</p>
+    {% endif %}
+
+    {% if current_user.is_authenticated %}
+      <div class="panel" style="margin-top:14px;">
+        {% if my_review %}
+          <h3 style="margin-top:0;">Ваш отзыв</h3>
+          <div class="panel" style="padding:12px;">
+            <div class="toolbar" style="margin-bottom:8px;">
+              <div><strong>Оценка:</strong> {{ my_review.rating }}/5</div>
+              <div style="opacity:.7; font-size:13px;">
+                {{ my_review.created_at.strftime('%d.%m.%Y %H:%M') if my_review.created_at else '' }}
+              </div>
+            </div>
+            <div style="white-space:pre-wrap; line-height:1.5;">{{ my_review.text }}</div>
+          </div>
+          <p style="margin:10px 0 0; opacity:.8;">Вы уже оставили отзыв для этого курса.</p>
+        {% else %}
+          <h3 style="margin-top:0;">Оставить отзыв</h3>
+          <form method="post" action="{{ url_for('courses.create_review', course_id=course.id) }}">
+            <input type="hidden" name="next_url" value="{{ url_for('courses.show', course_id=course.id) }}">
+
+            <div class="field">
+              <label for="rating">Оценка</label>
+              <select id="rating" name="rating" required>
+                {% for value, label in rating_choices %}
+                  <option value="{{ value }}" {% if value == 5 %}selected{% endif %}>{{ label|capitalize }}</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="review_text">Текст отзыва</label>
+              <textarea id="review_text" name="text" rows="4" required></textarea>
+            </div>
+
+            <button class="btn" type="submit">Отправить</button>
+          </form>
+        {% endif %}
+      </div>
+    {% else %}
+      <p style="margin-top:14px;">
+        Чтобы оставить отзыв, нужно <a href="{{ url_for('auth.login') }}">войти</a>.
+      </p>
+    {% endif %}
+  </section>
+
+  <section class="panel">
+    <h2 style="margin-top:0;">Программа курса</h2>
+
+    {% for theme in course.themes %}
+      <div class="panel" style="margin-bottom:12px;">
+        <div class="toolbar">
+          <h3 style="margin:0;">Тема {{ loop.index }}. {{ theme.name }}</h3>
+          {% if current_user.is_authenticated and current_user.id == course.author_id %}
+            <button class="btn" title="Добавить пункт" data-parent-id="{{ theme.id }}">+ Пункт</button>
+          {% endif %}
+        </div>
+
+        <div class="page-grid" style="gap:8px;">
+          {% set outer_loop = loop %}
+          {% for subtheme in theme.subthemes %}
+            <div class="panel" style="padding:10px 12px;">
+              <div class="toolbar" style="margin:0;">
+                <div>{{ outer_loop.index }}.{{ loop.index }}. {{ subtheme.name }}</div>
+                {% if current_user.is_authenticated and current_user.id == course.author_id %}
+                  <a href="#" class="btn" title="Добавить материал" data-parent-id="{{ theme.id }}">+ Материал</a>
+                {% endif %}
+              </div>
+            </div>
+          {% else %}
+            <div style="opacity:.75;">Подтем пока нет.</div>
+          {% endfor %}
+        </div>
+      </div>
+    {% else %}
+      <div style="opacity:.75;">Программа курса пока не заполнена.</div>
+    {% endfor %}
+
+    {% if current_user.is_authenticated and current_user.id == course.author_id %}
+      <div class="row-actions" style="justify-content:center; margin-top:8px;">
+        <button type="button" class="btn">Добавить тему</button>
+      </div>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}Lab4 — Пользователи{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="table-toolbar">
+    <div class="left">
+      <h2 style="margin:0;">Пользователи</h2>
+      <span class="badge">Всего: {{ users|length }}</span>
+    </div>
+    {% if me %}
+    <div class="right row-actions">
+      <a class="btn-lite" href="{{ url_for('change_password') }}">Смена пароля</a>
+      <a class="btn" href="{{ url_for('user_create') }}">Создать пользователя</a>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th style="width:80px;">№</th>
+          <th>Логин</th>
+          <th>ФИО</th>
+          <th>Роль</th>
+          <th style="width:340px;">Действия</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in users %}
+          <tr>
+            <td>{{ loop.index }}</td>
+            <td><span class="code-lite">{{ u.login }}</span></td>
+            <td>{{ (u.last_name or '') }} {{ u.first_name }} {{ (u.middle_name or '') }}</td>
+            <td>{{ u.role_name or "—" }}</td>
+            <td>
+              <div class="row-actions">
+                <a class="btn-lite" href="{{ url_for('user_view', user_id=u.id) }}">Просмотр</a>
+
+                {% if me %}
+                  <a class="btn-lite" href="{{ url_for('user_edit', user_id=u.id) }}">Редактировать</a>
+
+                  <form method="post" action="{{ url_for('user_delete', user_id=u.id) }}" style="display:inline;"
+                        onsubmit="return confirm('Удалить пользователя: {{ ((u.last_name or '') ~ ' ' ~ u.first_name ~ ' ' ~ (u.middle_name or ''))|trim or u.login }}?');">
+                    <button type="submit" class="btn-danger" {% if me.id == u.id %}disabled{% endif %}>Удалить</button>
+                  </form>
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

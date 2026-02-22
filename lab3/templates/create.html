@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Lab3 — Создать заметку{% endblock %}
+
+{% block content %}
+<div class="card">
+  <h2 style="margin-top:0;">Создать заметку</h2>
+  <p class="muted">Заполни поля ниже и нажми «Сохранить».</p>
+
+  <form method="post">
+    <div class="field">
+      <label for="title">Заголовок</label>
+      <input id="title" name="title" value="{{ title }}" placeholder="Например: План на неделю">
+      {% if errors.title %}<div class="err">{{ errors.title }}</div>{% endif %}
+    </div>
+
+    <div class="field">
+      <label for="text">Текст заметки</label>
+      <textarea id="text" name="text" placeholder="Введите текст заметки...">{{ text }}</textarea>
+      {% if errors.text %}<div class="err">{{ errors.text }}</div>{% endif %}
+    </div>
+
+    <div class="actions">
+      <button type="submit" class="btn">Сохранить</button>
+      <a class="btn" href="{{ url_for('index') }}">Отмена</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

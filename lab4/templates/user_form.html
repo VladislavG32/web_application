@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% from 'partials/_form_macros.html' import user_form_fields %}
+
+{% block title %}
+  {{ app_title }} — {% if mode == 'create' %}Создание пользователя{% else %}Редактирование пользователя{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width:760px;margin:0 auto;">
+  <div class="table-toolbar">
+    <div class="left">
+      <h2 style="margin:0">{% if mode == 'create' %}Создание пользователя{% else %}Редактирование пользователя{% endif %}</h2>
+      {% if user %}<span class="badge">ID {{ user.id }}</span>{% endif %}
+    </div>
+    <div class="right">
+      <a class="btn-lite" href="{{ url_for('index') }}">К списку</a>
+    </div>
+  </div>
+
+  <form method="post" novalidate>
+    {{ user_form_fields(mode, form, errors, roles, role_disabled=role_disabled) }}
+    <div class="actions">
+      <button class="btn btn-primary" type="submit">
+        {% if mode == 'create' %}Сохранить{% else %}Обновить{% endif %}
+      </button>
+      <a class="btn-lite" href="{{ url_for('index') }}">Отмена</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+{% block title %}{{ app_title }} — Отчёт по страницам{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="table-toolbar">
+    <div class="left">
+      <h2 style="margin:0">Отчёт по страницам</h2>
+      <span class="badge">Строк: {{ rows|length }}</span>
+    </div>
+    <div class="right row-actions">
+      <a class="btn-lite" href="{{ url_for('visitlogs.logs_index') }}">К журналу</a>
+      <a class="btn btn-primary" href="{{ url_for('visitlogs.export_pages_csv') }}">Экспорт в CSV</a>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th style="width:70px">№</th>
+          <th>Страница</th>
+          <th style="width:220px">Количество посещений</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+          <tr>
+            <td>{{ row.n }}</td>
+            <td><span class="code-lite">{{ row.page }}</span></td>
+            <td>{{ row.cnt }}</td>
+          </tr>
+        {% else %}
+          <tr><td colspan="3">Нет данных.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Lab3 — Счётчик посещений{% endblock %}
+
+{% block content %}
+  <div class="card">
+    <h1 style="margin-top:0;">Счётчик посещений</h1>
+    <p class="muted">Значение хранится в глобальном объекте <code>session</code>.</p>
+
+    <p style="font-size:20px; margin:12px 0;">
+      Количество посещений этой страницы: <b>{{ visits }}</b>
+    </p>
+
+    <p class="muted" style="margin-bottom:0;">
+      Обновите страницу — значение увеличится.
+    </p>
+  </div>
+
+  <div class="card">
+    <h2 style="margin-top:0;">Навигация</h2>
+    <p style="display:flex; gap:10px; flex-wrap:wrap; margin:0;">
+      <a class="btn" href="{{ url_for('index') }}">На главную</a>
+      {% if current_user.is_authenticated %}
+        <a class="btn btn-primary" href="{{ url_for('secret') }}">Секретная страница</a>
+      {% else %}
+        <a class="btn btn-primary" href="{{ url_for('login') }}">Войти</a>
+      {% endif %}
+    </p>
+  </div>
+{% endblock %}

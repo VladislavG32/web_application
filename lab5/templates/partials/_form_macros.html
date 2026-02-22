@@ -1,0 +1,48 @@
+{% macro input_field(label, name, form, errors, type='text', required=false, readonly=false) -%}
+  <div class="field">
+    <label for="{{ name }}">{{ label }}{% if required %} *{% endif %}</label>
+    <input
+      id="{{ name }}"
+      name="{{ name }}"
+      type="{{ type }}"
+      value="{{ (form.get(name) or '') if type != 'password' else '' }}"
+      {% if required %}required{% endif %}
+      {% if readonly %}readonly{% endif %}
+      class="{% if errors.get(name) %}is-invalid{% endif %}"
+    >
+    {% if errors.get(name) %}<div class="field-error">{{ errors.get(name) }}</div>{% endif %}
+  </div>
+{%- endmacro %}
+
+{% macro select_role_field(roles, form, errors, disabled=false) -%}
+  <div class="field">
+    <label for="role_id">Роль</label>
+    <select id="role_id" name="role_id" class="{% if errors.get('role_id') %}is-invalid{% endif %}" {% if disabled %}disabled{% endif %}>
+      {% for role in roles %}
+        {% set selected = (form.get('role_id')|string == role.id|string) %}
+        <option value="{{ role.id }}" {% if selected %}selected{% endif %}>{{ role.description or role.name }}</option>
+      {% endfor %}
+    </select>
+    {% if disabled %}
+      <input type="hidden" name="role_id" value="{{ form.get('role_id') or '' }}">
+      <div class="muted small">Поле роли недоступно для изменения.</div>
+    {% endif %}
+    {% if errors.get('role_id') %}<div class="field-error">{{ errors.get('role_id') }}</div>{% endif %}
+  </div>
+{%- endmacro %}
+
+{% macro user_form_fields(mode, form, errors, roles, role_disabled=false) -%}
+  {{ input_field('Фамилия', 'last_name', form, errors, required=true) }}
+  {{ input_field('Имя', 'first_name', form, errors, required=true) }}
+  {{ input_field('Отчество', 'middle_name', form, errors) }}
+
+  {% if mode == 'create' %}
+    {{ input_field('Логин', 'login', form, errors, required=true) }}
+    {{ input_field('Пароль', 'password', form, errors, type='password', required=true) }}
+  {% else %}
+    {{ input_field('Логин', 'login', form, errors, readonly=true) }}
+    <div class="muted small" style="margin-top:-6px;margin-bottom:8px;">Логин не редактируется. Для смены пароля используйте отдельную страницу.</div>
+  {% endif %}
+
+  {{ select_role_field(roles, form, errors, disabled=role_disabled) }}
+{%- endmacro %}

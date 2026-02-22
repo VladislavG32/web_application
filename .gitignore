@@ -1,0 +1,11 @@
+﻿.venv/
+ve/
+__pycache__/
+*.pyc
+*.pyo
+*.db
+*.log
+gunicorn.ctl
+.env
+instance/
+*.bak*
