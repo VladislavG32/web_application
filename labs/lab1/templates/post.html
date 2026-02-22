@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block title %}{{ post.title }}{% endblock %}
+
+{% block content %}
+  <article>
+    <h1>{{ post.title }}</h1>
+    <p><em>Автор: {{ post.author }} • Дата: {{ post.date }}</em></p>
+
+    {% for paragraph in post.text.split("\n\n") %}
+      <p>{{ paragraph }}</p>
+    {% endfor %}
+
+    <p><a href="{{ url_for('index') }}">← Назад</a></p>
+
+  </article>
+{% endblock %}

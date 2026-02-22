@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <title>Lab4</title>
+</head>
+<body>
+  <h1>Пользователи</h1>
+
+  <p>
+    <a href="/lab4/visit-logs/">Журнал посещений</a>
+    <a href="/lab4/change-password">Сменить пароль</a>
+    <a href="/lab4/logout">Выйти</a>
+  </p>
+
+  <table border="1" cellpadding="6" cellspacing="0">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Логин</th>
+        <th>Роль</th>
+        <th>Действия</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for u in users %}
+      <tr>
+        <td>{{ u.id }}</td>
+        <td>{{ u.login }}</td>
+        <td>{{ u.role_name }}</td>
+        <td>
+          <a href="/lab4/users/{{ u.id }}">Профиль</a>
+          {% if current_user and current_user.role_name == 'admin' %}
+            | <a href="/lab4/users/{{ u.id }}/edit">Редактировать</a>
+            | <form method="post" action="/lab4/users/{{ u.id }}/delete" style="display:inline">
+                <button type="submit">Удалить</button>
+              </form>
+          {% endif %}
+          {% if current_user and current_user.id == u.id and current_user.role_name != 'admin' %}
+            | <a href="/lab4/users/{{ u.id }}/edit">Редактировать себя</a>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% if current_user and current_user.role_name == 'admin' %}
+    <p><a href="/lab4/users/create">Создать пользователя</a></p>
+  {% endif %}
+</body>
+</html>
